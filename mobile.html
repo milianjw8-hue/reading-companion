@@ -99,9 +99,15 @@ if (typeof pdfjsLib === "undefined") {
     background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:8px 10px;
     margin-bottom:5px; cursor:pointer;}
   #cropBtn{background:transparent; border:none; color:var(--paper); font-size:16px; cursor:pointer; padding:2px 5px; display:none; border-radius:6px;}
-  #cropBtn.on{background:var(--marker); }
+  #cropBtn.on{background:var(--marker); color:var(--ink);}
+  #cropTip{line-height:1.7;}
+  #cropTip b{color:var(--marker);}
   body.cropping .textLayer{pointer-events:none;}
+  body.cropping{overscroll-behavior:none;}
+  body.cropping .pageBox,
+  body.cropping .pageBox *{touch-action:none; -webkit-user-select:none; user-select:none;}
   body.cropping .pageBox{cursor:crosshair;}
+  body.cropping #viewerWrap{touch-action:none;}
   .cropRect{position:absolute; border:2px dashed var(--marker); background:rgba(255,212,0,.18); z-index:5; pointer-events:none;}
   #cropTip{display:none; position:fixed; top:48px; left:8px; right:8px; z-index:36; font-size:12px;
     background:var(--ink); color:var(--paper); border-radius:9px; padding:8px 11px; line-height:1.6; text-align:center;}
@@ -177,7 +183,7 @@ if (typeof pdfjsLib === "undefined") {
 
 <div id="viewerWrap"></div>
 
-<div id="cropTip">그림이나 표를 드래그해서 감싸세요. 취소하려면 🖼 를 다시 누르세요.</div>
+<div id="cropTip">그림이나 표를 <b>손가락으로 감싸듯 끌어</b> 주세요.<br>이 동안에는 화면이 스크롤되지 않습니다. 취소하려면 🖼 를 다시 누르세요.</div>
 
 <div id="scanWarn">이 문서는 텍스트 정보가 없는 스캔본으로 보입니다. 구절 선택과 질문이 동작하지 않습니다. <u id="closeWarn">✕</u></div>
 
@@ -618,6 +624,9 @@ $("viewerWrap").addEventListener("pointermove", function (e) {
   cropRect.style.height = Math.abs(y - cropStart.y) + "px";
 });
 
+$("viewerWrap").addEventListener("pointercancel", function () {
+  if (cropMode) { clearRect(); }
+});
 $("viewerWrap").addEventListener("pointerup", function (e) {
   if (!cropMode || !cropStart || !cropRect || !cropBox) return;
   var r = cropBox.getBoundingClientRect();
@@ -625,7 +634,10 @@ $("viewerWrap").addEventListener("pointerup", function (e) {
   var w = Math.abs(e.clientX - r.left - cropStart.x), h = Math.abs(e.clientY - r.top - cropStart.y);
   var box = cropBox;
   clearRect();
-  if (w < 24 || h < 24) { setStatusMsg("영역이 너무 작습니다. 조금 더 크게 드래그해 주세요."); return; }
+  if (w < 20 || h < 20) {
+    setStatusMsg("영역이 너무 작습니다. 그림 전체를 감싸듯 조금 더 크게 끌어 주세요.");
+    return;
+  }
 
   var src = box.querySelector("canvas");
   var k = src.width / box.clientWidth;           // 캔버스 해상도 대비 표시 배율
@@ -639,6 +651,7 @@ $("viewerWrap").addEventListener("pointerup", function (e) {
                                  0, 0, out.width, out.height);
   cropData = out.toDataURL("image/jpeg", 0.85);
 
+  try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {}
   $("cropImg").src = cropData;
   $("cropPreview").style.display = "flex";
   $("chatSheet").classList.remove("collapsed");

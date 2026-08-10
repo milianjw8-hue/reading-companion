@@ -135,7 +135,11 @@ if (typeof pdfjsLib === "undefined") {
        cursor:text; transform-origin:0 0;}
   .textLayer ::selection{background:var(--marker-soft);}
   body.cropping .textLayer{pointer-events:none;}
+  body.cropping{overscroll-behavior:none;}
+  body.cropping .pageBox,
+  body.cropping .pageBox *{touch-action:none; -webkit-user-select:none; user-select:none;}
   body.cropping .pageBox{cursor:crosshair;}
+  body.cropping #right{touch-action:none;}
   .cropRect{position:absolute; border:2px dashed var(--marker);
        background:rgba(255,212,0,.18); z-index:5; pointer-events:none;}
 
@@ -688,6 +692,9 @@ $("right").addEventListener("pointermove", function (e) {
   cropRect.style.top = Math.min(y, cropStart.y) + "px";
   cropRect.style.width = Math.abs(x - cropStart.x) + "px";
   cropRect.style.height = Math.abs(y - cropStart.y) + "px";
+});
+$("right").addEventListener("pointercancel", function () {
+  if (cropMode) { clearRect(); }
 });
 $("right").addEventListener("pointerup", function (e) {
   if (!cropMode || !cropStart || !cropRect || !cropBox) return;
