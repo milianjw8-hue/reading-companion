@@ -1,0 +1,6 @@
+# 키가 담길 수 있는 파일은 절대 커밋하지 않는다
+.env
+.env.*
+*.key
+secrets.*
+config.local.*
