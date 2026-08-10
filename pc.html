@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reading Companion — PC 버전</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+if (typeof pdfjsLib === "undefined") {
+  document.write('<scr'+'ipt src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"><\/scr'+'ipt>');
+}
+</script>
+<style>
+  :root{
+    --ink:#1b2436; --ink-soft:#3a4660; --paper:#fbfaf7; --paper-dim:#f0eee8;
+    --marker:#ffd400; --marker-soft:rgba(255,212,0,.45);
+    --line:#d9d5cc; --white:#fff; --danger:#b6452c; --ok:#2f7a52;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%; overflow:hidden;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;
+       background:var(--paper-dim); color:var(--ink); display:flex; flex-direction:column;}
+
+  /* ── 헤더 ── */
+  header{background:var(--ink); color:var(--paper); padding:0 14px; height:46px;
+         display:flex; align-items:center; gap:12px; flex-shrink:0; z-index:40;}
+  header .logo{font-size:14px; font-weight:700; white-space:nowrap;}
+  header .logo b{background:var(--marker); color:var(--ink); padding:0 4px; border-radius:2px;}
+  #fileMeta{font-size:12px; opacity:.7; overflow:hidden; text-overflow:ellipsis;
+            white-space:nowrap; flex:1;}
+  .hbtn{background:transparent; border:1px solid rgba(251,250,247,.25); color:var(--paper);
+        font:inherit; font-size:12px; border-radius:7px; padding:5px 10px; cursor:pointer; white-space:nowrap;}
+  .hbtn:hover{background:rgba(251,250,247,.12);}
+  .hbtn.on{background:var(--marker); color:var(--ink); border-color:var(--marker);}
+  .zoom{display:flex; align-items:center; gap:3px; background:rgba(251,250,247,.1);
+        border-radius:7px; padding:2px;}
+  .zoom button{background:transparent; border:none; color:var(--paper); font:inherit;
+        font-size:14px; width:26px; height:26px; border-radius:5px; cursor:pointer;}
+  .zoom button:hover{background:rgba(251,250,247,.18);}
+  .zoom span{font-size:11.5px; min-width:42px; text-align:center; opacity:.85;}
+  #pageBadge{font-size:12px; background:var(--ink-soft); border-radius:20px;
+             padding:3px 10px; white-space:nowrap;}
+
+  /* ── 본문 2분할 ── */
+  #main{flex:1; display:flex; min-height:0;}
+
+  /* 왼쪽: 채팅 */
+  #left{width:430px; min-width:300px; max-width:60%; background:var(--white);
+        border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0;}
+  #splitter{width:6px; background:var(--paper-dim); cursor:col-resize; flex-shrink:0;
+            border-left:1px solid var(--line); border-right:1px solid var(--line);}
+  #splitter:hover{background:var(--marker-soft);}
+
+  /* 오른쪽: PDF */
+  #right{flex:1; overflow-y:auto; background:var(--paper-dim); padding:14px 0 40px; min-width:0;}
+
+  /* ── 설정 패널 ── */
+  #setup{padding:16px; overflow-y:auto; border-bottom:1px solid var(--line); flex-shrink:0; max-height:100%;}
+  #setup h2{font-size:14px; margin-bottom:9px;}
+  #setup label{display:block; font-size:11.5px; color:var(--ink-soft); margin:8px 0 4px;}
+  #setup input{width:100%; font:inherit; font-size:13.5px; padding:9px 11px;
+       border:1.5px solid var(--line); border-radius:8px; background:var(--paper); outline:none;}
+  #setup input:focus{border-color:var(--ink-soft);}
+  .small{font-size:11px; color:#8a8578; margin-top:5px; line-height:1.6;}
+  .brow{display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;}
+  .btn{font:inherit; font-size:13px; font-weight:600; border:none; border-radius:8px;
+       padding:9px 13px; cursor:pointer; background:var(--ink); color:var(--paper);}
+  .btn.accent{background:var(--marker); color:var(--ink);}
+  .btn.ghost{background:transparent; color:var(--danger); border:1.5px solid var(--line);}
+  .btn:disabled{opacity:.45; cursor:default;}
+  #setupState{font-size:12px; font-weight:600; margin-top:8px; min-height:16px;}
+  #setupState.ok{color:var(--ok);} #setupState.err{color:var(--danger);}
+  .notice{font-size:11.5px; background:#fffbe6; border:1px solid #f0e2a0; border-radius:8px;
+          padding:9px 11px; margin-bottom:12px; line-height:1.65;}
+  .notice li{margin-left:15px; margin-top:2px;}
+  #modelList{margin-top:9px; display:none; max-height:170px; overflow-y:auto;}
+  #modelList button{display:block; width:100%; text-align:left; font:inherit; font-size:12.5px;
+       background:var(--paper); border:1px solid var(--line); border-radius:7px;
+       padding:7px 9px; margin-bottom:4px; cursor:pointer;}
+  #modelList button:hover{border-color:var(--ink-soft);}
+  #diagBox{margin-top:9px; font-size:11.5px; color:var(--ink-soft);}
+  #diagBox summary{cursor:pointer;}
+  #diag{white-space:pre-wrap; word-break:break-all; background:var(--paper-dim);
+        border-radius:7px; padding:8px; margin-top:5px; font-size:10.5px;
+        max-height:150px; overflow:auto;}
+
+  /* ── 채팅 ── */
+  #chatArea{flex:1; display:flex; flex-direction:column; min-height:0;}
+  #chatLog{flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:11px;}
+  #empty{color:#a8a396; font-size:13px; text-align:center; margin:auto; line-height:1.9;}
+  #empty kbd{background:var(--paper-dim); border:1px solid var(--line); border-radius:4px;
+       padding:1px 6px; font-size:11.5px; font-family:inherit;}
+  .msg{max-width:92%; font-size:14px; line-height:1.72; white-space:pre-wrap; word-break:break-word;}
+  .msg.user{align-self:flex-end; background:var(--ink); color:var(--paper);
+       padding:9px 13px; border-radius:13px 13px 3px 13px;}
+  .msg.user .quote{display:block; font-size:11.5px; opacity:.8; border-left:2px solid var(--marker);
+       padding-left:8px; margin-bottom:6px; font-style:italic;}
+  .msg.ai{align-self:flex-start; background:var(--paper); border:1px solid var(--line);
+       padding:9px 13px; border-radius:13px 13px 13px 3px;}
+  .msg.ai.err{border-color:var(--danger); color:var(--danger);}
+  .msg.ai.loading{color:#8a8578; font-style:italic;}
+  .msg img.thumb{max-width:190px; border-radius:8px; border:1px solid var(--line); display:block;}
+
+  #quickRow{display:flex; gap:5px; padding:0 14px 7px; flex-wrap:wrap;}
+  #quickRow button{font:inherit; font-size:11.5px; background:var(--paper);
+       border:1px solid var(--line); border-radius:14px; padding:5px 10px;
+       cursor:pointer; color:var(--ink-soft);}
+  #quickRow button:hover{border-color:var(--ink-soft); color:var(--ink);}
+  #selChip,#cropPreview{margin:0 14px 7px; font-size:12px; color:var(--ink-soft);
+       background:var(--marker-soft); border-radius:8px; padding:6px 10px; display:none;}
+  #selChip u,#cropPreview u{cursor:pointer; margin-left:6px; font-weight:700;
+       text-decoration:none; color:var(--danger); float:right;}
+  #cropPreview{display:none; align-items:center; gap:9px;}
+  #cropPreview img{height:44px; border:1px solid var(--line); border-radius:5px; background:#fff;}
+  #inputRow{display:flex; gap:7px; padding:10px 14px 14px; border-top:1px solid var(--paper-dim);
+       align-items:flex-end;}
+  #qInput{flex:1; border:1.5px solid var(--line); border-radius:11px; resize:none;
+       font:inherit; font-size:14px; padding:10px 12px; max-height:130px;
+       background:var(--paper); outline:none; line-height:1.6;}
+  #qInput:focus{border-color:var(--ink-soft);}
+  #sendBtn{background:var(--marker); color:var(--ink); border:none; border-radius:11px;
+       font-size:13.5px; font-weight:700; padding:11px 16px; cursor:pointer; flex-shrink:0;}
+  #sendBtn:disabled{opacity:.45;}
+
+  /* ── PDF ── */
+  .pageBox{position:relative; margin:0 auto 14px; background:var(--white);
+           box-shadow:0 1px 5px rgba(27,36,54,.16);}
+  .pageBox canvas{display:block; width:100%; height:auto;}
+  .pageNum{position:absolute; top:6px; right:8px; font-size:10px; color:#b3aea2;
+       background:rgba(255,255,255,.85); padding:1px 6px; border-radius:8px;
+       pointer-events:none; z-index:3;}
+  .textLayer{position:absolute; top:0; left:0; right:0; bottom:0; overflow:hidden;
+       line-height:1; z-index:2;}
+  .textLayer span{color:transparent; position:absolute; white-space:pre;
+       cursor:text; transform-origin:0 0;}
+  .textLayer ::selection{background:var(--marker-soft);}
+  body.cropping .textLayer{pointer-events:none;}
+  body.cropping .pageBox{cursor:crosshair;}
+  .cropRect{position:absolute; border:2px dashed var(--marker);
+       background:rgba(255,212,0,.18); z-index:5; pointer-events:none;}
+
+  #dropHint{position:absolute; left:50%; top:44%; transform:translate(-50%,-50%);
+       text-align:center; color:#a8a396; font-size:14px; line-height:2;}
+  #dropHint b{display:block; font-size:17px; color:var(--ink-soft); margin-bottom:6px;}
+
+  #selBar{position:fixed; display:none; gap:5px; z-index:50; background:var(--ink);
+       border-radius:22px; padding:5px 6px; box-shadow:0 4px 16px rgba(27,36,54,.35);}
+  #selBar button{border:none; background:transparent; color:var(--paper); font:inherit;
+       font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:16px;
+       cursor:pointer; white-space:nowrap;}
+  #selBar button:hover{background:rgba(251,250,247,.15);}
+  #selBar button.hl{background:var(--marker); color:var(--ink);}
+
+  #fatal{position:fixed; top:0; left:0; right:0; z-index:99; background:var(--danger);
+       color:#fff; font-size:12px; line-height:1.6; padding:9px 12px; white-space:pre-wrap;}
+  #toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:60;
+       background:var(--ink); color:var(--paper); font-size:13px; padding:10px 18px;
+       border-radius:22px; display:none; box-shadow:0 4px 16px rgba(27,36,54,.4);}
+
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-thumb{background:#c9c4b8; border-radius:5px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Reading <b>Companion</b></div>
+  <button class="hbtn" id="openBtn">PDF 열기</button>
+  <div id="fileMeta"></div>
+  <div class="zoom">
+    <button id="zoomOut" title="축소 (-)">−</button>
+    <span id="zoomVal">100%</span>
+    <button id="zoomIn" title="확대 (+)">+</button>
+    <button id="zoomFit" title="너비 맞춤 (0)" style="width:auto;padding:0 8px;font-size:11.5px;">맞춤</button>
+  </div>
+  <div id="pageBadge">— / —</div>
+  <button class="hbtn" id="cropBtn" title="그림 영역 선택 (G)">그림 선택</button>
+  <button class="hbtn" id="setupBtn" title="설정">설정</button>
+  <input type="file" id="fileInput" accept="application/pdf" hidden>
+</header>
+
+<div id="main">
+  <div id="left">
+    <div id="setup">
+      <div class="notice">
+        <b>시작 전에 확인하세요</b>
+        <ul>
+          <li>PDF는 업로드되지 않고 이 기기 안에서만 처리됩니다.</li>
+          <li>API 키는 이 브라우저에만 저장됩니다.</li>
+          <li>무료 티어는 입력이 모델 개선에 쓰일 수 있습니다 — <b>미공개 원고·심사 중 논문은 넣지 마세요.</b></li>
+        </ul>
+      </div>
+
+      <h2>API 키 설정</h2>
+      <label for="key">Google AI Studio API 키</label>
+      <input type="password" id="key" placeholder="AIza…" autocomplete="off">
+      <div class="small">발급: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> — 카드 없이 발급됩니다.</div>
+
+      <label for="model">모델 ID</label>
+      <input type="text" id="model" placeholder="gemini-flash-latest">
+      <div class="small">모델명이 바뀌면 앱이 자동으로 대체 모델을 찾습니다. 직접 고르려면 아래 목록을 쓰세요.</div>
+
+      <div class="brow">
+        <button class="btn" id="saveBtn">저장</button>
+        <button class="btn" id="listBtn">모델 목록</button>
+        <button class="btn accent" id="testBtn">연결 테스트</button>
+        <button class="btn ghost" id="clearBtn">키 삭제</button>
+      </div>
+      <div id="setupState"></div>
+      <div id="modelList"></div>
+      <details id="diagBox"><summary>진단 정보</summary><pre id="diag"></pre></details>
+    </div>
+
+    <div id="chatArea">
+      <div id="chatLog">
+        <div id="empty">
+          PDF를 열고 문장을 드래그해 보세요.<br>
+          <kbd>/</kbd> 입력창 · <kbd>G</kbd> 그림 선택 · <kbd>+</kbd> <kbd>−</kbd> 확대·축소
+        </div>
+      </div>
+      <div id="selChip"></div>
+      <div id="cropPreview"><img id="cropImg" alt="선택 영역"><span style="flex:1;">이 영역에 대해 질문합니다</span><u id="cropClear">✕</u></div>
+      <div id="quickRow">
+        <button data-q="이 페이지의 핵심 내용을 3줄로 요약해 주세요.">페이지 요약</button>
+        <button data-q="이 페이지에서 저자가 주장하는 바와 그 근거를 정리해 주세요.">논지 정리</button>
+        <button data-q="이 페이지에 나온 전문 용어를 골라 뜻을 알려주세요.">용어 정리</button>
+        <button data-q="이 페이지에서 사용된 방법론을 설명해 주세요.">방법론</button>
+      </div>
+      <div id="inputRow">
+        <textarea id="qInput" rows="1" placeholder="질문을 입력하세요  (Enter 전송, Shift+Enter 줄바꿈)"></textarea>
+        <button id="sendBtn">질문</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="splitter"></div>
+
+  <div id="right">
+    <div id="dropHint"><b>PDF를 여기로 끌어다 놓으세요</b>또는 상단의 "PDF 열기" 버튼</div>
+  </div>
+</div>
+
+<div id="selBar">
+  <button class="hl" data-act="translate">번역</button>
+  <button data-act="explain">쉽게 설명</button>
+  <button data-act="vocab">단어·표현</button>
+  <button data-act="ask">직접 질문</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+function showFatal(msg) {
+  var b = document.getElementById("fatal");
+  if (!b) { b = document.createElement("div"); b.id = "fatal"; document.body.appendChild(b); }
+  b.textContent = msg;
+}
+window.addEventListener("error", function (e) {
+  showFatal("스크립트 오류: " + (e.message || "") + (e.filename ? "\n" + e.filename + ":" + e.lineno : ""));
+});
+
+var $ = function (id) { return document.getElementById(id); };
+var KEY_STORE = "rc.apiKey", MODEL_STORE = "rc.model", DEFAULT_MODEL = "gemini-flash-latest";
+var WEB_URL = "https://milianjw8-hue.github.io/reading-companion/";
+var PROTO = location.protocol, ORIGIN_OK = (PROTO === "http:" || PROTO === "https:" || PROTO === "file:");
+
+var PDF_READY = (typeof pdfjsLib !== "undefined");
+if (PDF_READY) {
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  } catch (e) { PDF_READY = false; }
+}
+if (!PDF_READY) showFatal("PDF 라이브러리를 불러오지 못했습니다. 네트워크나 방화벽을 확인해 주세요.");
+
+var STORAGE_OK = true;
+try { localStorage.setItem("rc.probe", "1"); localStorage.removeItem("rc.probe"); }
+catch (e) { STORAGE_OK = false; }
+
+var pdfDoc = null, pageTexts = [], currentPage = 1, numPages = 0;
+var zoom = 1, baseWidth = 0, docTitle = "", chatHistory = [];
+var pendingSelection = "", cropData = null, cropMode = false;
+var cropStart = null, cropRect = null, cropBox = null;
+
+function diag(line) {
+  var d = $("diag");
+  d.textContent += "[" + new Date().toLocaleTimeString() + "] " + line + "\n";
+  d.scrollTop = d.scrollHeight;
+}
+diag("origin=" + (location.origin || PROTO) + " | 화면=" + window.innerWidth + "x" + window.innerHeight);
+
+function toast(msg) {
+  var t = $("toast");
+  t.textContent = msg; t.style.display = "block";
+  clearTimeout(t._h);
+  t._h = setTimeout(function () { t.style.display = "none"; }, 2200);
+}
+
+/* ───── 설정 ───── */
+function getKey() { try { return localStorage.getItem(KEY_STORE) || ""; } catch (e) { return ""; } }
+function getModel() { try { return localStorage.getItem(MODEL_STORE) || DEFAULT_MODEL; } catch (e) { return DEFAULT_MODEL; } }
+function setState(cls, msg) { var e = $("setupState"); e.className = cls; e.textContent = msg; }
+
+$("key").value = getKey();
+$("model").value = getModel();
+if (!STORAGE_OK) setState("err", "브라우저 저장이 차단되어 키가 이번 세션에만 유지됩니다.");
+if (getKey()) $("setup").style.display = "none";
+
+$("setupBtn").onclick = function () {
+  var s = $("setup");
+  var open = s.style.display !== "none";
+  s.style.display = open ? "none" : "block";
+  $("setupBtn").classList.toggle("on", !open);
+};
+$("saveBtn").onclick = function () {
+  var k = $("key").value.trim(), m = $("model").value.trim() || DEFAULT_MODEL;
+  if (!k) { setState("err", "키를 입력해 주세요."); return; }
+  try { localStorage.setItem(KEY_STORE, k); localStorage.setItem(MODEL_STORE, m); setState("ok", "저장했습니다."); }
+  catch (e) { setState("err", "저장 실패: " + e.message); }
+};
+$("clearBtn").onclick = function () {
+  try { localStorage.removeItem(KEY_STORE); localStorage.removeItem(MODEL_STORE); } catch (e) {}
+  $("key").value = ""; $("model").value = DEFAULT_MODEL;
+  setState("ok", "키를 삭제했습니다.");
+};
+$("testBtn").onclick = async function () {
+  $("testBtn").disabled = true; setState("", "확인 중…");
+  try { await askModel("한국어로 간결히 답하세요.", "OK라고만 답하세요."); setState("ok", "연결 성공"); }
+  catch (e) { setState("err", explainError(e.message)); }
+  finally { $("testBtn").disabled = false; }
+};
+$("listBtn").onclick = async function () {
+  var key = ($("key").value || getKey()).trim();
+  if (!key) { setState("err", "먼저 키를 입력해 주세요."); return; }
+  $("listBtn").disabled = true; setState("", "목록을 불러오는 중…");
+  try {
+    var r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + encodeURIComponent(key));
+    var j = await r.json();
+    if (!r.ok) {
+      diag("ListModels HTTP " + r.status + " :: " + JSON.stringify(j).slice(0, 300));
+      setState("err", "목록을 못 받았습니다 (HTTP " + r.status + ").");
+      $("diagBox").open = true; return;
+    }
+    var ms = (j.models || []).filter(function (m) {
+      return (m.supportedGenerationMethods || []).indexOf("generateContent") >= 0;
+    });
+    var box = $("modelList"); box.innerHTML = ""; box.style.display = "block";
+    ms.slice(0, 30).forEach(function (m) {
+      var id = m.name.replace("models/", "");
+      var b = document.createElement("button");
+      b.textContent = id;
+      b.onclick = function () { $("model").value = id; setState("ok", id + " 선택됨. 저장을 눌러 주세요."); };
+      box.appendChild(b);
+    });
+    setState("ok", ms.length + "개 모델을 불러왔습니다.");
+  } catch (e) {
+    diag("ListModels 예외: " + e.message); $("diagBox").open = true;
+    setState("err", "네트워크 오류: " + e.message);
+  } finally { $("listBtn").disabled = false; }
+};
+
+/* ───── 모델 자동 탐색 ───── */
+async function findWorkingModel(key) {
+  var r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + encodeURIComponent(key));
+  if (!r.ok) throw new Error("LIST_FAILED");
+  var j = await r.json();
+  var ms = (j.models || []).filter(function (m) {
+    return (m.supportedGenerationMethods || []).indexOf("generateContent") >= 0;
+  }).map(function (m) { return m.name.replace("models/", ""); });
+  var pick = ms.filter(function (n) { return /flash-latest/.test(n); });
+  if (!pick.length) pick = ms.filter(function (n) { return /flash/.test(n) && !/lite|thinking|image|tts|native/.test(n); }).sort().reverse();
+  if (!pick.length) pick = ms.filter(function (n) { return /flash/.test(n); });
+  if (!pick.length) pick = ms;
+  return pick[0] || null;
+}
+
+/* ───── LLM ───── */
+async function askModel(systemText, userText, imageDataUrl) {
+  try { return await callOnce(systemText, userText, imageDataUrl); }
+  catch (e) {
+    if (String(e.message).indexOf("BAD_MODEL") === 0) {
+      var key = ($("key").value || getKey()).trim();
+      diag("모델 사용 불가 → 대체 모델 탐색");
+      var alt = null;
+      try { alt = await findWorkingModel(key); } catch (e2) { diag("목록 조회 실패"); }
+      if (alt) {
+        diag("대체 모델 전환: " + alt);
+        $("model").value = alt;
+        try { localStorage.setItem(MODEL_STORE, alt); } catch (e3) {}
+        toast("모델을 " + alt + " 로 전환했습니다");
+        return await callOnce(systemText, userText, imageDataUrl);
+      }
+    }
+    throw e;
+  }
+}
+
+async function callOnce(systemText, userText, imageDataUrl) {
+  var key = ($("key").value || getKey()).trim();
+  var model = ($("model").value || getModel()).trim();
+  if (!key) throw new Error("NO_KEY");
+
+  var url = "https://generativelanguage.googleapis.com/v1beta/models/" +
+            encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(key);
+  var parts = [];
+  if (imageDataUrl) {
+    var c = imageDataUrl.indexOf(",");
+    parts.push({ inline_data: { mime_type: "image/jpeg", data: imageDataUrl.slice(c + 1) } });
+  }
+  parts.push({ text: userText });
+  var body = { contents: [{ role: "user", parts: parts }],
+               generationConfig: { maxOutputTokens: 1400, temperature: 0.3 } };
+  if (systemText) body.systemInstruction = { parts: [{ text: systemText }] };
+
+  var res;
+  try {
+    res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  } catch (e) { diag("fetch 실패: " + e.message + " (모델=" + model + ")"); throw new Error("NETWORK"); }
+
+  if (!res.ok) {
+    var detail = "";
+    try { var j = await res.json(); detail = (j.error && j.error.message) || ""; } catch (e2) {}
+    diag("HTTP " + res.status + " :: " + detail.slice(0, 250));
+    if (res.status === 401 || res.status === 403) throw new Error("BAD_KEY::" + detail);
+    if (res.status === 400) throw new Error(/API key|API_KEY/i.test(detail) ? "BAD_KEY::" + detail : "BAD_REQUEST::" + detail);
+    if (res.status === 429) throw new Error("QUOTA::" + detail);
+    if (res.status === 404) throw new Error("BAD_MODEL::" + detail);
+    throw new Error("HTTP_" + res.status + "::" + detail);
+  }
+  var data = await res.json();
+  var cand = (data.candidates && data.candidates[0]) || null;
+  if (!cand) throw new Error("EMPTY");
+  var text = ((cand.content && cand.content.parts) || []).map(function (p) { return p.text || ""; }).join("").trim();
+  if (!text) {
+    if (cand.finishReason === "MAX_TOKENS") throw new Error("TRUNCATED");
+    if (cand.finishReason === "SAFETY") throw new Error("BLOCKED");
+    throw new Error("EMPTY");
+  }
+  return text;
+}
+
+function explainError(msg) {
+  if (msg === "NO_KEY") return "먼저 설정에서 API 키를 저장해 주세요.";
+  if (msg === "NETWORK") return ORIGIN_OK
+    ? "서버에 연결하지 못했습니다. 인터넷 연결과 키를 확인해 주세요."
+    : "요청이 차단됐습니다. " + WEB_URL + " 로 접속해 주세요.";
+  if (msg === "EMPTY") return "응답이 비어 있습니다. 질문을 바꿔 다시 시도해 주세요.";
+  if (msg === "TRUNCATED") return "응답 길이 제한에 걸렸습니다. 질문 범위를 좁혀 주세요.";
+  if (msg === "BLOCKED") return "모델이 응답을 거부했습니다. 표현을 바꿔 시도해 주세요.";
+  if (msg.indexOf("BAD_KEY") === 0) return "키가 유효하지 않습니다. AI Studio에서 확인해 주세요.";
+  if (msg.indexOf("BAD_MODEL") === 0) return "사용 가능한 모델을 찾지 못했습니다. 설정에서 모델 목록을 눌러 직접 골라 주세요.";
+  if (msg.indexOf("QUOTA") === 0) return "무료 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.";
+  if (msg.indexOf("BAD_REQUEST") === 0) return "요청 형식 오류: " + msg.split("::")[1];
+  return "오류가 발생했습니다: " + msg;
+}
+
+/* ───── PDF 열기 ───── */
+$("openBtn").onclick = function () {
+  if (!PDF_READY) { showFatal("PDF 라이브러리가 없어 파일을 열 수 없습니다."); return; }
+  $("fileInput").click();
+};
+$("fileInput").onchange = function (e) { if (e.target.files[0]) loadPdf(e.target.files[0]); };
+
+/* 드래그 앤 드롭 */
+["dragenter", "dragover"].forEach(function (ev) {
+  $("right").addEventListener(ev, function (e) { e.preventDefault(); $("right").style.background = "#e8e5dc"; });
+});
+["dragleave", "drop"].forEach(function (ev) {
+  $("right").addEventListener(ev, function (e) { e.preventDefault(); $("right").style.background = ""; });
+});
+$("right").addEventListener("drop", function (e) {
+  var f = e.dataTransfer.files[0];
+  if (f && /\.pdf$/i.test(f.name)) loadPdf(f);
+  else toast("PDF 파일만 열 수 있습니다");
+});
+
+async function loadPdf(file) {
+  docTitle = file.name;
+  $("fileMeta").textContent = docTitle;
+  var buf = await file.arrayBuffer();
+  try { pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise; }
+  catch (err) { toast("PDF를 여는 데 실패했습니다"); diag("PDF 오류: " + err.message); return; }
+  numPages = pdfDoc.numPages;
+  pageTexts = new Array(numPages + 1).fill(null);
+  chatHistory = [];
+  currentPage = 1;
+  $("chatLog").innerHTML = "";
+  $("setup").style.display = "none";
+  $("setupBtn").classList.remove("on");
+  var p1 = await pdfDoc.getPage(1);
+  baseWidth = p1.getViewport({ scale: 1 }).width;
+  await buildPages();
+  checkScanned();
+  toast(numPages + "쪽 문서를 열었습니다");
+}
+
+var pageObserver = new IntersectionObserver(function (es) {
+  es.forEach(function (en) {
+    if (en.isIntersecting && !en.target.dataset.rendered) {
+      en.target.dataset.rendered = "1";
+      renderPage(en.target);
+    }
+  });
+}, { rootMargin: "700px" });
+
+var scrollObserver = new IntersectionObserver(function (es) {
+  es.forEach(function (en) {
+    if (en.isIntersecting) {
+      currentPage = parseInt(en.target.dataset.page, 10);
+      $("pageBadge").textContent = currentPage + " / " + numPages;
+    }
+  });
+}, { threshold: 0.3 });
+
+async function buildPages(keepPage) {
+  var wrap = $("right");
+  wrap.innerHTML = "";
+  var avail = wrap.clientWidth - 40;
+  var scale = (avail / baseWidth) * zoom;
+  for (var i = 1; i <= numPages; i++) {
+    var page = await pdfDoc.getPage(i);
+    var vp = page.getViewport({ scale: scale });
+    var box = document.createElement("div");
+    box.className = "pageBox";
+    box.dataset.page = i;
+    box.dataset.scale = scale;
+    box.style.width = vp.width + "px";
+    box.style.height = vp.height + "px";
+    box.innerHTML = '<div class="pageNum">' + i + " / " + numPages + "</div>";
+    wrap.appendChild(box);
+    pageObserver.observe(box);
+    scrollObserver.observe(box);
+  }
+  if (keepPage) {
+    var t = wrap.querySelector('.pageBox[data-page="' + keepPage + '"]');
+    if (t) wrap.scrollTop = t.offsetTop - 14;
+  }
+}
+
+async function renderPage(box) {
+  var n = parseInt(box.dataset.page, 10), scale = parseFloat(box.dataset.scale);
+  var page = await pdfDoc.getPage(n);
+  var vp = page.getViewport({ scale: scale });
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var canvas = document.createElement("canvas");
+  canvas.width = Math.floor(vp.width * dpr);
+  canvas.height = Math.floor(vp.height * dpr);
+  var ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  box.prepend(canvas);
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+  var tl = document.createElement("div");
+  tl.className = "textLayer";
+  tl.style.setProperty("--scale-factor", vp.scale);
+  box.appendChild(tl);
+  var tc = await page.getTextContent();
+  pageTexts[n] = tc.items.map(function (it) { return it.str; }).join(" ").replace(/\s+/g, " ").trim();
+  try { pdfjsLib.renderTextLayer({ textContentSource: tc, container: tl, viewport: vp, textDivs: [] }); }
+  catch (e) {}
+}
+
+async function getPageText(n) {
+  if (!pdfDoc || n < 1 || n > numPages) return "";
+  if (pageTexts[n] !== null && pageTexts[n] !== undefined) return pageTexts[n];
+  var page = await pdfDoc.getPage(n);
+  var tc = await page.getTextContent();
+  pageTexts[n] = tc.items.map(function (it) { return it.str; }).join(" ").replace(/\s+/g, " ").trim();
+  return pageTexts[n];
+}
+
+async function checkScanned() {
+  var probe = await getPageText(1);
+  if (probe.length < 20 && numPages > 1) probe += await getPageText(2);
+  if (probe.length < 20) {
+    addMsg("ai err", "이 문서는 텍스트 정보가 없는 스캔본으로 보입니다. 문장 선택은 안 되지만, 그림 선택 기능은 사용할 수 있습니다.");
+  }
+}
+
+/* ───── 확대·축소 ───── */
+function setZoom(z) {
+  if (!pdfDoc) return;
+  zoom = Math.max(0.5, Math.min(3, z));
+  $("zoomVal").textContent = Math.round(zoom * 100) + "%";
+  buildPages(currentPage);
+}
+$("zoomIn").onclick = function () { setZoom(zoom + 0.15); };
+$("zoomOut").onclick = function () { setZoom(zoom - 0.15); };
+$("zoomFit").onclick = function () { setZoom(1); };
+
+/* ───── 분할선 드래그 ───── */
+(function () {
+  var dragging = false;
+  $("splitter").addEventListener("mousedown", function (e) {
+    dragging = true; e.preventDefault();
+    document.body.style.userSelect = "none"; document.body.style.cursor = "col-resize";
+  });
+  document.addEventListener("mousemove", function (e) {
+    if (!dragging) return;
+    var w = Math.max(300, Math.min(window.innerWidth * 0.6, e.clientX));
+    $("left").style.width = w + "px";
+  });
+  document.addEventListener("mouseup", function () {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.userSelect = ""; document.body.style.cursor = "";
+    if (pdfDoc) buildPages(currentPage);
+  });
+})();
+
+/* ───── 문장 선택 ───── */
+document.addEventListener("selectionchange", function () {
+  var sel = window.getSelection();
+  var txt = sel ? sel.toString().trim() : "";
+  if (txt.length > 1 && sel.anchorNode && $("right").contains(sel.anchorNode)) {
+    pendingSelection = txt;
+    var r = sel.getRangeAt(0).getBoundingClientRect();
+    var bar = $("selBar");
+    bar.style.display = "flex";
+    var bw = bar.offsetWidth || 320;
+    var left = Math.max(8, Math.min(window.innerWidth - bw - 8, r.left + r.width / 2 - bw / 2));
+    var barTop = r.top - 46;
+    if (barTop < 52) barTop = r.bottom + 10;
+    bar.style.left = left + "px";
+    bar.style.top = barTop + "px";
+  } else if (!txt) {
+    $("selBar").style.display = "none";
+  }
+});
+
+$("selBar").addEventListener("click", function (e) {
+  var act = e.target.dataset.act;
+  if (!act || !pendingSelection) return;
+  var sel = pendingSelection;
+  window.getSelection().removeAllRanges();
+  $("selBar").style.display = "none";
+  if (act === "translate") sendQuestion("이 문장을 자연스러운 한국어로 번역해 주세요.", sel);
+  else if (act === "explain") sendQuestion("이 부분이 무슨 뜻인지 쉽게 설명해 주세요.", sel);
+  else if (act === "vocab") sendQuestion("여기서 어려운 단어와 표현을 골라 뜻과 용례를 알려주세요.", sel);
+  else if (act === "ask") {
+    $("selChip").style.display = "block";
+    $("selChip").innerHTML = "선택: " + sel.slice(0, 40).replace(/</g, "&lt;") + (sel.length > 40 ? "…" : "") + "<u id='clearSel'>✕</u>";
+    $("qInput").focus();
+  }
+});
+$("selChip").addEventListener("click", function (e) {
+  if (e.target.id === "clearSel") { pendingSelection = ""; $("selChip").style.display = "none"; }
+});
+
+/* ───── 그림 영역 선택 ───── */
+$("cropBtn").onclick = function () { toggleCrop(); };
+function toggleCrop() {
+  cropMode = !cropMode;
+  document.body.classList.toggle("cropping", cropMode);
+  $("cropBtn").classList.toggle("on", cropMode);
+  if (cropMode) toast("그림이나 표를 드래그로 감싸세요");
+  clearRect();
+}
+function clearRect() {
+  if (cropRect && cropRect.parentNode) cropRect.parentNode.removeChild(cropRect);
+  cropRect = null; cropStart = null; cropBox = null;
+}
+
+$("right").addEventListener("pointerdown", function (e) {
+  if (!cropMode) return;
+  var box = e.target.closest(".pageBox");
+  if (!box || !box.querySelector("canvas")) return;
+  e.preventDefault();
+  clearRect();
+  cropBox = box;
+  var r = box.getBoundingClientRect();
+  cropStart = { x: e.clientX - r.left, y: e.clientY - r.top };
+  cropRect = document.createElement("div");
+  cropRect.className = "cropRect";
+  cropRect.style.left = cropStart.x + "px";
+  cropRect.style.top = cropStart.y + "px";
+  box.appendChild(cropRect);
+  box.setPointerCapture(e.pointerId);
+});
+$("right").addEventListener("pointermove", function (e) {
+  if (!cropMode || !cropStart || !cropRect) return;
+  var r = cropBox.getBoundingClientRect();
+  var x = e.clientX - r.left, y = e.clientY - r.top;
+  cropRect.style.left = Math.min(x, cropStart.x) + "px";
+  cropRect.style.top = Math.min(y, cropStart.y) + "px";
+  cropRect.style.width = Math.abs(x - cropStart.x) + "px";
+  cropRect.style.height = Math.abs(y - cropStart.y) + "px";
+});
+$("right").addEventListener("pointerup", function (e) {
+  if (!cropMode || !cropStart || !cropRect || !cropBox) return;
+  var r = cropBox.getBoundingClientRect();
+  var x1 = Math.min(e.clientX - r.left, cropStart.x), y1 = Math.min(e.clientY - r.top, cropStart.y);
+  var w = Math.abs(e.clientX - r.left - cropStart.x), h = Math.abs(e.clientY - r.top - cropStart.y);
+  var box = cropBox;
+  clearRect();
+  if (w < 24 || h < 24) { toast("영역이 너무 작습니다"); return; }
+
+  var src = box.querySelector("canvas");
+  var k = src.width / box.clientWidth;
+  var out = document.createElement("canvas");
+  var ow = Math.round(w * k), oh = Math.round(h * k);
+  var shrink = Math.min(1, 1400 / Math.max(ow, oh));
+  out.width = Math.round(ow * shrink);
+  out.height = Math.round(oh * shrink);
+  out.getContext("2d").drawImage(src, Math.round(x1 * k), Math.round(y1 * k), ow, oh, 0, 0, out.width, out.height);
+  cropData = out.toDataURL("image/jpeg", 0.85);
+
+  $("cropImg").src = cropData;
+  $("cropPreview").style.display = "flex";
+  cropMode = false;
+  document.body.classList.remove("cropping");
+  $("cropBtn").classList.remove("on");
+  $("qInput").focus();
+});
+$("cropClear").onclick = function () { cropData = null; $("cropPreview").style.display = "none"; };
+
+/* ───── 채팅 ───── */
+$("quickRow").addEventListener("click", function (e) {
+  var q = e.target.dataset.q;
+  if (q) sendQuestion(q, "");
+});
+$("qInput").addEventListener("input", function () {
+  this.style.height = "auto";
+  this.style.height = Math.min(this.scrollHeight, 130) + "px";
+});
+$("qInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("sendBtn").click(); }
+});
+$("sendBtn").onclick = function () {
+  var q = $("qInput").value.trim();
+  var img = cropData;
+  if (!q && img) q = "이 그림을 본문 내용과 연결해 설명해 주세요.";
+  if (!q) return;
+  var sel = $("selChip").style.display === "block" ? pendingSelection : "";
+  $("qInput").value = ""; $("qInput").style.height = "auto";
+  $("selChip").style.display = "none"; pendingSelection = "";
+  $("cropPreview").style.display = "none"; cropData = null;
+  sendQuestion(q, sel, img);
+};
+
+function addMsg(cls, text, quote, img) {
+  var e = $("empty"); if (e) e.remove();
+  var d = document.createElement("div");
+  d.className = "msg " + cls;
+  if (quote) {
+    var q = document.createElement("span");
+    q.className = "quote";
+    q.textContent = "\u201C" + (quote.length > 110 ? quote.slice(0, 110) + "…" : quote) + "\u201D";
+    d.appendChild(q);
+  }
+  if (img) {
+    var im = document.createElement("img");
+    im.className = "thumb"; im.src = img;
+    im.style.marginBottom = "7px";
+    d.appendChild(im);
+  }
+  d.appendChild(document.createTextNode(text));
+  $("chatLog").appendChild(d);
+  $("chatLog").scrollTop = $("chatLog").scrollHeight;
+  return d;
+}
+
+async function sendQuestion(question, selection, imageDataUrl) {
+  if (!pdfDoc) { toast("먼저 PDF를 열어주세요"); return; }
+  var img = imageDataUrl || null;
+  addMsg("user", question, selection, img);
+  var loader = addMsg("ai loading", "생각 중…");
+  $("sendBtn").disabled = true;
+  try {
+    var ctxParts = [];
+    var cur = await getPageText(currentPage);
+    if (cur) ctxParts.push("[현재 페이지 p." + currentPage + "]\n" + cur.slice(0, 6000));
+    var prev = await getPageText(currentPage - 1);
+    if (prev) ctxParts.push("[이전 페이지 p." + (currentPage - 1) + " 끝부분]\n" + prev.slice(-1200));
+    if (!ctxParts.length && !img) {
+      loader.remove();
+      addMsg("ai err", "이 페이지에서 텍스트를 읽지 못했습니다. 스캔본이거나 아직 렌더링 중일 수 있습니다.");
+      $("sendBtn").disabled = false; return;
+    }
+
+    var sys = "당신은 영어 원서와 학술 논문을 함께 읽어주는 리딩 컴패니언입니다. " +
+      "독자는 한국어를 쓰는 연구자이며 지금 「" + docTitle + "」를 읽고 있습니다.\n\n" +
+      ctxParts.join("\n\n") +
+      "\n\n규칙: 한국어로 답하세요. 번역은 자연스럽게, 설명은 문맥을 짚어 간결하게. " +
+      "단어 풀이는 뜻·품사·이 문맥에서의 의미 순으로. " +
+      "전문 용어는 국문 정식 용어와 영문을 함께 제시하세요. " +
+      "제공된 페이지 밖 내용을 물으면 해당 페이지로 이동해 달라고 안내하세요.";
+    if (img) {
+      sys += "\n\n독자가 이 페이지에서 그림·표 영역을 잘라 함께 보냈습니다. " +
+             "축·범례·단위·패널 구분을 구체적으로 읽고 위 본문과 연결해 설명하세요. " +
+             "이미지에서 확실히 읽히지 않는 값은 추측하지 말고 읽을 수 없다고 밝히세요.";
+    }
+
+    var userText = "";
+    if (selection) userText += "[독자가 선택한 구절]\n\"" + selection + "\"\n\n";
+    userText += "[질문]\n" + question;
+    if (chatHistory.length) userText = "[이전 대화 요약]\n" + chatHistory.slice(-4).join("\n") + "\n\n" + userText;
+
+    var answer = await askModel(sys, userText, img);
+    loader.remove();
+    addMsg("ai", answer);
+    chatHistory.push("Q: " + question.slice(0, 120));
+    chatHistory.push("A: " + answer.slice(0, 200));
+  } catch (err) {
+    loader.remove();
+    addMsg("ai err", explainError(err.message));
+  } finally { $("sendBtn").disabled = false; }
+}
+
+/* ───── 키보드 단축키 ───── */
+document.addEventListener("keydown", function (e) {
+  var typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
+  if (e.key === "Escape") {
+    if (cropMode) toggleCrop();
+    $("selBar").style.display = "none";
+    if (typing) document.activeElement.blur();
+    return;
+  }
+  if (typing) return;
+  if (e.key === "/") { e.preventDefault(); $("qInput").focus(); }
+  else if (e.key === "g" || e.key === "G") { e.preventDefault(); toggleCrop(); }
+  else if (e.key === "+" || e.key === "=") { e.preventDefault(); setZoom(zoom + 0.15); }
+  else if (e.key === "-" || e.key === "_") { e.preventDefault(); setZoom(zoom - 0.15); }
+  else if (e.key === "0") { e.preventDefault(); setZoom(1); }
+  else if (e.key === "o" || e.key === "O") { e.preventDefault(); $("openBtn").click(); }
+});
+
+/* 창 크기 변경 시 재배치 */
+var rsz;
+window.addEventListener("resize", function () {
+  clearTimeout(rsz);
+  rsz = setTimeout(function () { if (pdfDoc) buildPages(currentPage); }, 250);
+});
+</script>
+</body>
+</html>

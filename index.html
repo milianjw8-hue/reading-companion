@@ -4,746 +4,86 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reading Companion</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>
-if (typeof pdfjsLib === "undefined") {
-  document.write('<scr'+'ipt src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"><\/scr'+'ipt>');
-}
-</script>
 <style>
-  :root{
-    --ink:#1b2436; --ink-soft:#3a4660; --paper:#fbfaf7; --paper-dim:#f0eee8;
-    --marker:#ffd400; --marker-soft:rgba(255,212,0,.45);
-    --line:#d9d5cc; --white:#fff; --danger:#b6452c; --ok:#2f7a52;
-  }
-  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  :root{--ink:#1b2436; --paper:#fbfaf7; --marker:#ffd400; --ink-soft:#3a4660;}
+  *{margin:0;padding:0;box-sizing:border-box;}
   html,body{height:100%;}
-  body{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;
-    background:var(--paper-dim); color:var(--ink); display:flex; flex-direction:column; overflow:hidden;
-  }
-  header{background:var(--ink); color:var(--paper); padding:10px 12px; display:flex; align-items:center; gap:10px; flex-shrink:0; z-index:30;}
-  header .logo{font-size:15px; font-weight:700; white-space:nowrap;}
-  header .logo b{background:var(--marker); color:var(--ink); padding:0 4px; border-radius:2px;}
-  #fileMeta{font-size:12px; opacity:.75; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; text-align:right;}
-  #pageBadge{font-size:12px; background:var(--ink-soft); border-radius:20px; padding:3px 9px; white-space:nowrap; display:none;}
-  #gearBtn{background:transparent; border:none; color:var(--paper); font-size:17px; cursor:pointer; padding:2px 4px;}
-
-  #setup{flex:1; overflow-y:auto; padding:20px 16px 40px;}
-  .wrap{max-width:560px; margin:0 auto;}
-  #setup h1{font-size:22px; line-height:1.4; margin-bottom:6px;}
-  #setup h1 mark{background:linear-gradient(transparent 55%, var(--marker-soft) 55%); padding:0 2px;}
-  #setup .lead{font-size:13px; color:var(--ink-soft); line-height:1.7; margin-bottom:16px;}
-  .notice{font-size:12px; background:#fffbe6; border:1px solid #f0e2a0; border-radius:10px; padding:11px 13px; margin-bottom:14px; line-height:1.65;}
-  .notice li{margin-left:16px; margin-top:3px;}
-  .card{background:var(--white); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px;}
-  .card h2{font-size:14px; margin-bottom:8px;}
-  label{display:block; font-size:12px; color:var(--ink-soft); margin:8px 0 4px;}
-  input{width:100%; font:inherit; font-size:14px; padding:10px 12px; border:1.5px solid var(--line); border-radius:9px; background:var(--paper); outline:none;}
-  input:focus{border-color:var(--ink-soft);}
-  .small{font-size:11px; color:#8a8578; margin-top:6px; line-height:1.6;}
-  .row{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
-  button.btn{font:inherit; font-size:14px; font-weight:600; border:none; border-radius:9px; padding:11px 18px; cursor:pointer; background:var(--ink); color:var(--paper);}
-  button.accent{background:var(--marker); color:var(--ink);}
-  button.ghost{background:transparent; color:var(--danger); border:1.5px solid var(--line);}
-  button.btn:disabled{opacity:.45;}
-  #setupState{font-size:12px; font-weight:600; margin-top:8px;}
-  #setupState.ok{color:var(--ok);} #setupState.err{color:var(--danger);}
-
-  #viewerWrap{flex:1; overflow-y:auto; display:none; padding:12px 8px 180px;}
-  .pageBox{position:relative; margin:0 auto 12px; background:var(--white); box-shadow:0 1px 4px rgba(27,36,54,.15);}
-  .pageBox canvas{display:block; width:100%; height:auto;}
-  .pageNum{position:absolute; top:5px; right:7px; font-size:10px; color:#b3aea2; background:rgba(255,255,255,.85); padding:1px 6px; border-radius:8px; pointer-events:none; z-index:3;}
-  .textLayer{position:absolute; inset:0; overflow:hidden; line-height:1; z-index:2; opacity:1;}
-  .textLayer span{color:transparent; position:absolute; white-space:pre; cursor:text; transform-origin:0 0;}
-  .textLayer ::selection{background:var(--marker-soft);}
-
-  #scanWarn{display:none; position:fixed; top:52px; left:8px; right:8px; z-index:36; font-size:12px;
-    background:#fff3ef; border:1px solid #e6b9a8; color:var(--danger); border-radius:9px; padding:9px 11px; line-height:1.6;}
-  #scanWarn u{float:right; cursor:pointer; text-decoration:none; font-weight:700;}
-
-  #selBar{position:fixed; left:50%; transform:translateX(-50%); bottom:96px; display:none; gap:5px; z-index:40;
-    background:var(--ink); border-radius:24px; padding:6px 7px; box-shadow:0 4px 16px rgba(27,36,54,.35);
-    max-width:calc(100vw - 16px); overflow-x:auto;}
-  #selBar button{border:none; background:transparent; color:var(--paper); font-size:13px; font-weight:600; padding:7px 11px; border-radius:18px; cursor:pointer; white-space:nowrap;}
-  #selBar button.hl{background:var(--marker); color:var(--ink);}
-
-  #chatSheet{position:fixed; left:0; right:0; bottom:0; z-index:35; background:var(--white);
-    border-top:1px solid var(--line); border-radius:16px 16px 0 0; box-shadow:0 -4px 20px rgba(27,36,54,.12);
-    display:none; flex-direction:column; max-height:72vh;}
-  #chatSheet.collapsed #chatLog{display:none;}
-  #chatHandle{display:flex; align-items:center; justify-content:center; padding:8px 0 3px; cursor:pointer; user-select:none;}
-  #chatHandle .bar{width:36px; height:4px; border-radius:2px; background:var(--line);}
-  #chatLog{overflow-y:auto; padding:10px 14px; display:flex; flex-direction:column; gap:10px; flex:1; min-height:130px;}
-  .msg{max-width:88%; font-size:14px; line-height:1.65; white-space:pre-wrap; word-break:break-word;}
-  .msg.user{align-self:flex-end; background:var(--ink); color:var(--paper); padding:9px 13px; border-radius:14px 14px 3px 14px;}
-  .msg.user .quote{display:block; font-size:12px; opacity:.8; border-left:2px solid var(--marker); padding-left:8px; margin-bottom:6px; font-style:italic;}
-  .msg.ai{align-self:flex-start; background:var(--paper); border:1px solid var(--line); padding:9px 13px; border-radius:14px 14px 14px 3px;}
-  .msg.ai.err{border-color:var(--danger); color:var(--danger);}
-  .msg.ai.loading{color:#8a8578; font-style:italic;}
-  #inputRow{display:flex; gap:8px; padding:8px 12px calc(8px + env(safe-area-inset-bottom)); border-top:1px solid var(--paper-dim); align-items:flex-end;}
-  #qInput{flex:1; border:1.5px solid var(--line); border-radius:12px; resize:none; font:inherit; font-size:14px; padding:10px 12px; max-height:90px; background:var(--paper); outline:none;}
-  #sendBtn{background:var(--marker); color:var(--ink); border:none; border-radius:12px; font-size:14px; font-weight:700; padding:11px 16px; cursor:pointer; flex-shrink:0;}
-  #sendBtn:disabled{opacity:.45;}
-  #selChip{display:none; margin:6px 14px 0; font-size:12px; color:var(--ink-soft); background:var(--marker-soft); border-radius:8px; padding:5px 9px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  #selChip u{cursor:pointer; margin-left:6px; font-weight:700; text-decoration:none;}
-
-  #fileWarn{display:none; font-size:12px; background:#f4f6fb; border:1px solid #ccd4e4; color:var(--ink-soft);
-    border-radius:10px; padding:11px 13px; margin-bottom:14px; line-height:1.65;}
-  #diagBox{margin-top:10px; font-size:12px; color:var(--ink-soft);}
-  #diagBox summary{cursor:pointer;}
-  #diag{white-space:pre-wrap; word-break:break-all; background:var(--paper-dim); border-radius:8px;
-    padding:9px; margin-top:6px; font-size:11px; max-height:200px; overflow:auto;}
-  #modelList{margin-top:10px; display:none;}
-  #modelList button{display:block; width:100%; text-align:left; font:inherit; font-size:13px;
-    background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:8px 10px;
-    margin-bottom:5px; cursor:pointer;}
-  #cropBtn{background:transparent; border:none; color:var(--paper); font-size:16px; cursor:pointer; padding:2px 5px; display:none; border-radius:6px;}
-  #cropBtn.on{background:var(--marker); }
-  body.cropping .textLayer{pointer-events:none;}
-  body.cropping .pageBox{cursor:crosshair;}
-  .cropRect{position:absolute; border:2px dashed var(--marker); background:rgba(255,212,0,.18); z-index:5; pointer-events:none;}
-  #cropTip{display:none; position:fixed; top:48px; left:8px; right:8px; z-index:36; font-size:12px;
-    background:var(--ink); color:var(--paper); border-radius:9px; padding:8px 11px; line-height:1.6; text-align:center;}
-  #cropPreview{display:none; margin:6px 14px 0; align-items:center; gap:8px;}
-  #cropPreview img{height:52px; border:1px solid var(--line); border-radius:6px; background:#fff;}
-  #cropPreview .cp{flex:1; font-size:12px; color:var(--ink-soft);}
-  #cropPreview u{cursor:pointer; font-weight:700; text-decoration:none; color:var(--danger);}
-  ::-webkit-scrollbar{width:0; height:0;}
-  @media (min-width:760px){
-    #viewerWrap{padding:18px 0 200px;}
-    .pageBox{max-width:780px;}
-    #chatSheet{left:auto; right:16px; bottom:16px; width:400px; border-radius:16px; border:1px solid var(--line);}
-    #selBar{bottom:24px; left:24px; transform:none;}
-  }
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;
+       background:var(--ink); color:var(--paper); display:flex; align-items:center;
+       justify-content:center; padding:24px; line-height:1.75;}
+  .wrap{max-width:440px; width:100%; text-align:center;}
+  .logo{font-size:16px; font-weight:700; margin-bottom:26px;}
+  .logo b{background:var(--marker); color:var(--ink); padding:1px 6px; border-radius:3px;}
+  h1{font-size:26px; line-height:1.4; margin-bottom:10px;}
+  h1 mark{background:var(--marker); color:var(--ink); padding:1px 7px; border-radius:3px;}
+  p.lead{font-size:13.5px; opacity:.75; margin-bottom:22px;}
+  #status{font-size:12.5px; opacity:.6; margin-bottom:18px; min-height:34px;}
+  a.pick{display:block; background:var(--paper); color:var(--ink); text-decoration:none;
+         border-radius:12px; padding:15px 18px; margin-bottom:11px; text-align:left;
+         border:2px solid transparent;}
+  a.pick:hover{border-color:var(--marker);}
+  a.pick b{display:block; font-size:16px; margin-bottom:3px;}
+  a.pick span.d{display:block; font-size:12.5px; color:var(--ink-soft); line-height:1.65;}
+  a.pick.rec{border-color:var(--marker);}
+  a.pick .tag{float:right; background:var(--marker); color:var(--ink); font-size:11px;
+       font-weight:700; padding:2px 9px; border-radius:11px; display:none;}
+  .foot{margin-top:20px; font-size:12px; opacity:.55; line-height:1.9;}
+  .foot a{color:var(--marker); text-decoration:none;}
 </style>
 </head>
 <body>
+<div class="wrap">
+  <div class="logo">Reading <b>Companion</b></div>
+  <h1>영어 논문,<br><mark>AI와 같이 읽기</mark></h1>
+  <p class="lead">기기에 맞는 화면으로 이동합니다.</p>
+  <div id="status">기기를 확인하는 중…</div>
 
-<header>
-  <div class="logo">📖 Reading <b>Companion</b></div>
-  <div id="fileMeta"></div>
-  <div id="pageBadge">p.1</div>
-  <button id="cropBtn" title="그림 영역 선택">🖼</button>
-  <button id="gearBtn" title="설정">⚙</button>
-</header>
+  <a class="pick" id="pcLink" href="pc.html">
+    <b>PC 버전<span class="tag" id="pcTag">추천</span></b>
+    <span class="d">화면을 둘로 나눠 왼쪽에 대화, 오른쪽에 논문을 함께 봅니다. 확대·축소와 단축키를 지원합니다.</span>
+  </a>
 
-<div id="setup">
- <div class="wrap">
-  <h1>영어 원서와 논문,<br><mark>같이 읽어드릴게요</mark></h1>
-  <p class="lead">구절을 길게 눌러 선택하면 번역·설명·용어풀이를 바로 물어볼 수 있습니다. 이 앱은 서버 없이 브라우저 안에서만 동작합니다.</p>
+  <a class="pick" id="mbLink" href="mobile.html">
+    <b>모바일 버전<span class="tag" id="mbTag">추천</span></b>
+    <span class="d">세로 화면에 맞춘 구성입니다. 논문을 보다가 아래 대화창을 끌어올려 질문합니다.</span>
+  </a>
 
-  <div id="fileWarn"><b>로컬 파일로 열려 있습니다.</b> 이 상태로도 정상 동작합니다.
-  만약 호출이 막히면 폴더에서 <code>python -m http.server 8000</code> 실행 후
-  <code>http://localhost:8000/</code> 로 열어 보세요.</div>
-
-  <div class="notice">
-    <b>시작 전에 확인하세요</b>
-    <ul>
-      <li>PDF는 어디에도 업로드되지 않고 기기 안에서만 처리됩니다.</li>
-      <li>API 키는 이 브라우저에만 저장되며, 서버로 전송되지 않습니다.</li>
-      <li>다만 키는 개발자도구에서 확인 가능합니다 — 공용 PC에서는 쓰지 마세요.</li>
-      <li>무료 티어는 입력이 모델 개선에 사용될 수 있습니다 — <b>미공개 원고·심사 중 논문은 넣지 마세요.</b></li>
-    </ul>
-  </div>
-
-  <div class="card">
-    <h2>1. API 키 설정</h2>
-    <label for="key">Google AI Studio API 키</label>
-    <input type="password" id="key" placeholder="AIza…" autocomplete="off">
-    <div class="small">발급: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> — 카드 없이 발급됩니다.</div>
-    <label for="model">모델 ID</label>
-    <input type="text" id="model" placeholder="gemini-flash-latest">
-    <div class="small">무료 모델명은 수시로 바뀝니다. 모델 오류가 나면 AI Studio에서 현재 ID를 확인해 바꿔 넣으세요.</div>
-    <div class="row">
-      <button class="btn" id="saveBtn">저장</button>
-      <button class="btn" id="listBtn">사용 가능한 모델 불러오기</button>
-      <button class="btn accent" id="testBtn">연결 테스트</button>
-      <button class="btn ghost" id="clearBtn">키 삭제</button>
-    </div>
-    <div id="setupState"></div>
-    <div id="modelList"></div>
-    <details id="diagBox"><summary>진단 정보 (오류 시 열어보세요)</summary><pre id="diag"></pre></details>
-  </div>
-
-  <div class="card">
-    <h2>2. PDF 열기</h2>
-    <div class="row"><button class="btn accent" id="uploadBtn">PDF 선택</button></div>
-    <div class="small">키 없이도 읽기는 가능합니다. 질문 기능만 키가 필요합니다.</div>
-    <input type="file" id="fileInput" accept="application/pdf" hidden>
-  </div>
- </div>
-</div>
-
-<div id="viewerWrap"></div>
-
-<div id="cropTip">그림이나 표를 드래그해서 감싸세요. 취소하려면 🖼 를 다시 누르세요.</div>
-
-<div id="scanWarn">이 문서는 텍스트 정보가 없는 스캔본으로 보입니다. 구절 선택과 질문이 동작하지 않습니다. <u id="closeWarn">✕</u></div>
-
-<div id="selBar">
-  <button class="hl" data-act="translate">번역</button>
-  <button data-act="explain">쉽게 설명</button>
-  <button data-act="vocab">단어·표현</button>
-  <button data-act="ask">직접 질문</button>
-</div>
-
-<div id="chatSheet" class="collapsed">
-  <div id="chatHandle"><div class="bar"></div></div>
-  <div id="chatLog"></div>
-  <div id="selChip"></div>
-  <div id="cropPreview"><img id="cropImg" alt="선택한 영역"><span class="cp">이 영역에 대해 질문합니다</span><u id="cropClear">✕</u></div>
-  <div id="inputRow">
-    <textarea id="qInput" rows="1" placeholder="이 페이지에 대해 질문해 보세요…"></textarea>
-    <button id="sendBtn">질문</button>
+  <div class="foot">
+    처음 쓰시나요? <a href="guide.html">사용 가이드 보기</a><br>
+    시험해 볼 PDF가 필요하면 <a href="sample-The-Black-Cat-1896.pdf" download>샘플 소설 내려받기</a><br>
+    PDF는 업로드되지 않고 기기 안에서만 처리됩니다.
   </div>
 </div>
 
 <script>
 "use strict";
+(function () {
+  var isTouch = ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
+  var narrow = window.innerWidth < 900;
+  var mobileUA = /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i.test(navigator.userAgent);
+  var useMobile = mobileUA || (isTouch && narrow) || narrow;
 
-function showFatal(msg) {
-  var b = document.getElementById("fatal");
-  if (!b) {
-    b = document.createElement("div");
-    b.id = "fatal";
-    b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99;background:#b6452c;" +
-      "color:#fff;font-size:12px;line-height:1.6;padding:9px 12px;white-space:pre-wrap;";
-    document.body.appendChild(b);
+  document.getElementById(useMobile ? "mbTag" : "pcTag").style.display = "inline-block";
+  document.getElementById(useMobile ? "mbLink" : "pcLink").classList.add("rec");
+
+  var target = useMobile ? "mobile.html" : "pc.html";
+  var label = useMobile ? "모바일" : "PC";
+  var left = 3, cancelled = false;
+  var st = document.getElementById("status");
+
+  function tick() {
+    if (cancelled) return;
+    if (left <= 0) { location.replace(target); return; }
+    st.textContent = label + " 버전으로 이동합니다 (" + left + "초)\n다른 버전을 원하면 아래에서 직접 고르세요";
+    st.style.whiteSpace = "pre-line";
+    left--;
+    setTimeout(tick, 1000);
   }
-  b.textContent = msg;
-}
-window.addEventListener("error", function (e) {
-  showFatal("스크립트 오류: " + (e.message || "") + (e.filename ? "\n" + e.filename + ":" + e.lineno : ""));
-});
+  tick();
 
-var $ = function (id) { return document.getElementById(id); };
-
-var PDF_READY = (typeof pdfjsLib !== "undefined");
-if (PDF_READY) {
-  try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-  } catch (e) { PDF_READY = false; }
-}
-if (!PDF_READY) {
-  showFatal("PDF 라이브러리를 불러오지 못했습니다. 네트워크나 방화벽(cdnjs.cloudflare.com)을 확인해 주세요. 키 설정과 연결 테스트는 계속 사용할 수 있습니다.");
-}
-var KEY_STORE = "rc.apiKey", MODEL_STORE = "rc.model", DEFAULT_MODEL = "gemini-flash-latest";
-var pdfDoc = null, pageTexts = [], currentPage = 1, numPages = 0;
-var pendingSelection = "", chatHistory = [], docTitle = "", textFound = false;
-
-/* ───── 설정 ───── */
-var STORAGE_OK = true;
-try { localStorage.setItem("rc.probe", "1"); localStorage.removeItem("rc.probe"); }
-catch (e) { STORAGE_OK = false; }
-function getKey() { try { return localStorage.getItem(KEY_STORE) || ""; } catch (e) { return ""; } }
-function getModel() { try { return localStorage.getItem(MODEL_STORE) || DEFAULT_MODEL; } catch (e) { return DEFAULT_MODEL; } }
-
-function loadSettings() {
-  $("key").value = getKey();
-  $("model").value = getModel();
-}
-function setSetupState(cls, msg) { var e = $("setupState"); e.className = cls; e.textContent = msg; }
-function diag(line) {
-  var d = $("diag");
-  d.textContent += "[" + new Date().toLocaleTimeString() + "] " + line + "\n";
-  d.scrollTop = d.scrollHeight;
-}
-var PROTO = location.protocol;
-var WEB_URL = "https://milianjw8-hue.github.io/reading-companion/";
-var ORIGIN_OK = (PROTO === "http:" || PROTO === "https:");
-if (!ORIGIN_OK) {
-  $("fileWarn").innerHTML =
-    '<b>이 방식으로는 질문 기능이 동작하지 않습니다.</b> 파일을 직접 열어서 브라우저 보안 정책상 ' +
-    '외부 요청이 차단됩니다(출처: ' + (location.origin || PROTO) + '). ' +
-    '아래 주소로 접속해 주세요.<br><br>' +
-    '<a href="' + WEB_URL + '" style="color:#1b2436;font-weight:700;word-break:break-all;">' + WEB_URL + '</a>' +
-    '<br><br>PC에서 파일로 쓰시려면 해당 폴더에서 <code>python -m http.server 8000</code> 실행 후 ' +
-    '<code>http://localhost:8000/</code> 으로 여세요.';
-  $("fileWarn").style.background = "#fff3ef";
-  $("fileWarn").style.borderColor = "#e6b9a8";
-  $("fileWarn").style.color = "#b6452c";
-  $("fileWarn").style.display = "block";
-}
-diag("origin=" + location.protocol + "//" + location.host + " | ua=" + navigator.userAgent.slice(0, 60));
-
-$("listBtn").onclick = async function () {
-  var key = ($("key").value || getKey()).trim();
-  if (!key) { setSetupState("err", "먼저 키를 입력해 주세요."); return; }
-  $("listBtn").disabled = true;
-  setSetupState("", "모델 목록을 불러오는 중…");
-  try {
-    var r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + encodeURIComponent(key));
-    var j = await r.json();
-    if (!r.ok) {
-      diag("ListModels HTTP " + r.status + " :: " + JSON.stringify(j).slice(0, 400));
-      setSetupState("err", "목록을 못 받았습니다 (HTTP " + r.status + "). 진단 정보를 열어보세요.");
-      $("diagBox").open = true;
-      return;
-    }
-    var ms = (j.models || []).filter(function (m) {
-      return (m.supportedGenerationMethods || []).indexOf("generateContent") >= 0;
-    });
-    diag("사용 가능한 모델 " + ms.length + "개 수신");
-    var box = $("modelList");
-    box.innerHTML = "";
-    box.style.display = "block";
-    ms.slice(0, 25).forEach(function (m) {
-      var id = m.name.replace("models/", "");
-      var b = document.createElement("button");
-      b.textContent = id;
-      b.onclick = function () { $("model").value = id; setSetupState("ok", "모델을 " + id + " 로 설정했습니다. 저장 후 연결 테스트를 눌러 주세요."); };
-      box.appendChild(b);
-    });
-    setSetupState("ok", "목록을 불러왔습니다. 아래에서 모델을 고르세요.");
-  } catch (e) {
-    diag("ListModels 예외: " + e.message);
-    $("diagBox").open = true;
-    setSetupState("err", "네트워크 오류: " + e.message + " — 진단 정보를 확인해 주세요.");
-  } finally { $("listBtn").disabled = false; }
-};
-
-$("saveBtn").onclick = function () {
-  var k = $("key").value.trim(), m = $("model").value.trim() || DEFAULT_MODEL;
-  if (!k) { setSetupState("err", "키를 입력해 주세요."); return; }
-  try {
-    localStorage.setItem(KEY_STORE, k); localStorage.setItem(MODEL_STORE, m);
-    setSetupState("ok", "저장했습니다.");
-  } catch (e) { setSetupState("err", "저장 실패: " + e.message); }
-};
-$("clearBtn").onclick = function () {
-  try { localStorage.removeItem(KEY_STORE); localStorage.removeItem(MODEL_STORE); } catch (e) {}
-  $("key").value = ""; $("model").value = DEFAULT_MODEL;
-  setSetupState("ok", "키를 삭제했습니다.");
-};
-$("testBtn").onclick = async function () {
-  $("testBtn").disabled = true;
-  setSetupState("", "연결 확인 중…");
-  try {
-    await askModel("한국어로 간결히 답하세요.", "OK라고만 답하세요.");
-    setSetupState("ok", "연결 성공 — PDF를 열어 사용하세요.");
-  } catch (e) { setSetupState("err", explainError(e.message)); }
-  finally { $("testBtn").disabled = false; }
-};
-$("gearBtn").onclick = function () {
-  var open = $("setup").style.display !== "none";
-  if (pdfDoc) {
-    $("setup").style.display = open ? "none" : "block";
-    $("viewerWrap").style.display = open ? "block" : "none";
-    $("chatSheet").style.display = open ? "flex" : "none";
-  }
-};
-
-/* ───── 사용 가능한 모델 자동 탐색 ───── */
-async function findWorkingModel(key) {
-  var r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + encodeURIComponent(key));
-  if (!r.ok) throw new Error("LIST_FAILED");
-  var j = await r.json();
-  var ms = (j.models || []).filter(function (m) {
-    return (m.supportedGenerationMethods || []).indexOf("generateContent") >= 0;
-  }).map(function (m) { return m.name.replace("models/", ""); });
-
-  // 우선순위: flash-latest 별칭 > 최신 flash > flash-lite > 나머지
-  var prefer = ms.filter(function (n) { return /flash-latest/.test(n); });
-  if (!prefer.length) prefer = ms.filter(function (n) { return /flash/.test(n) && !/lite|thinking|image|tts|native/.test(n); }).sort().reverse();
-  if (!prefer.length) prefer = ms.filter(function (n) { return /flash/.test(n); });
-  if (!prefer.length) prefer = ms;
-  return prefer[0] || null;
-}
-
-/* ───── LLM 어댑터 ───── */
-async function askModel(systemText, userText, imageDataUrl) {
-  try {
-    return await callOnce(systemText, userText, imageDataUrl);
-  } catch (e) {
-    // 모델이 폐기된 경우: 사용 가능한 모델을 찾아 한 번만 자동 재시도
-    if (String(e.message).indexOf("BAD_MODEL") === 0) {
-      var key = ($("key").value || getKey()).trim();
-      diag("모델 사용 불가 → 대체 모델 탐색 시작");
-      var alt = null;
-      try { alt = await findWorkingModel(key); } catch (e2) { diag("모델 목록 조회 실패"); }
-      if (alt) {
-        diag("대체 모델로 전환: " + alt);
-        $("model").value = alt;
-        try { localStorage.setItem(MODEL_STORE, alt); } catch (e3) {}
-        return await callOnce(systemText, userText, imageDataUrl);
-      }
-    }
-    throw e;
-  }
-}
-
-async function callOnce(systemText, userText, imageDataUrl) {
-  var key = ($("key").value || getKey()).trim();
-  var model = ($("model").value || getModel()).trim();
-  if (!key) throw new Error("NO_KEY");
-
-  var url = "https://generativelanguage.googleapis.com/v1beta/models/" +
-            encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(key);
-  var parts = [];
-  if (imageDataUrl) {
-    var comma = imageDataUrl.indexOf(",");
-    parts.push({ inline_data: { mime_type: "image/jpeg", data: imageDataUrl.slice(comma + 1) } });
-  }
-  parts.push({ text: userText });
-  var body = {
-    contents: [{ role: "user", parts: parts }],
-    generationConfig: { maxOutputTokens: 1200, temperature: 0.3 }
-  };
-  if (systemText) body.systemInstruction = { parts: [{ text: systemText }] };
-
-  var res;
-  try {
-    res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  } catch (e) { diag("fetch 실패: " + e.message + " (모델=" + model + ")"); throw new Error("NETWORK"); }
-
-  if (!res.ok) {
-    var detail = "";
-    try { var j = await res.json(); detail = (j.error && j.error.message) || ""; } catch (e2) {}
-    diag("응답 HTTP " + res.status + " :: " + detail.slice(0, 300));
-    if (res.status === 401 || res.status === 403) throw new Error("BAD_KEY::" + detail);
-    if (res.status === 400) throw new Error(/API key|API_KEY/i.test(detail) ? "BAD_KEY::" + detail : "BAD_REQUEST::" + detail);
-    if (res.status === 429) throw new Error("QUOTA::" + detail);
-    if (res.status === 404) throw new Error("BAD_MODEL::" + detail);
-    diag("HTTP " + res.status + " :: " + detail.slice(0, 300));
-    throw new Error("HTTP_" + res.status + "::" + detail);
-  }
-  var data = await res.json();
-  var cand = (data.candidates && data.candidates[0]) || null;
-  if (!cand) throw new Error("EMPTY");
-  var parts = (cand.content && cand.content.parts) || [];
-  var text = parts.map(function (p) { return p.text || ""; }).join("").trim();
-  if (!text) {
-    if (cand.finishReason === "MAX_TOKENS") throw new Error("TRUNCATED");
-    if (cand.finishReason === "SAFETY") throw new Error("BLOCKED");
-    throw new Error("EMPTY");
-  }
-  return text;
-}
-
-function explainError(msg) {
-  if (msg === "NO_KEY") return "먼저 ⚙ 설정에서 API 키를 저장해 주세요.";
-  if (msg === "NETWORK") {
-    if (!ORIGIN_OK) return "파일을 직접 열어서 요청이 차단됐습니다. " + WEB_URL + " 로 접속해 주세요.";
-    return "서버에 연결하지 못했습니다. 인터넷 연결과 키를 확인해 주세요. 진단 정보를 열면 원문 오류를 볼 수 있습니다.";
-  }
-  if (msg === "EMPTY") return "응답이 비어 있습니다. 질문을 조금 바꿔 다시 보내 주세요.";
-  if (msg === "TRUNCATED") return "응답 길이 제한에 걸렸습니다. 질문 범위를 좁혀 주세요.";
-  if (msg === "BLOCKED") return "모델이 응답을 거부했습니다. 표현을 바꿔 시도해 주세요.";
-  if (msg.indexOf("BAD_KEY") === 0) return "키가 유효하지 않습니다. AI Studio에서 키를 다시 확인해 주세요.";
-  if (msg.indexOf("BAD_MODEL") === 0) return "모델 ID를 찾을 수 없습니다. ⚙ 설정에서 현재 사용 가능한 모델 ID로 바꿔 주세요.";
-  if (msg.indexOf("QUOTA") === 0) return "무료 한도를 초과했습니다. 잠시 후 다시 시도하거나 더 여유 있는 모델로 바꿔 보세요.";
-  if (msg.indexOf("BAD_REQUEST") === 0) return "요청 형식 오류: " + msg.split("::")[1];
-  return "오류가 발생했습니다: " + msg;
-}
-
-/* ───── PDF ───── */
-$("uploadBtn").onclick = function () {
-  if (!PDF_READY) { showFatal("PDF 라이브러리가 없어 파일을 열 수 없습니다. 네트워크를 확인한 뒤 새로고침해 주세요."); return; }
-  $("fileInput").click();
-};
-$("fileInput").onchange = async function (e) {
-  var file = e.target.files[0];
-  if (!file) return;
-  docTitle = file.name;
-  $("fileMeta").textContent = docTitle;
-  var buf = await file.arrayBuffer();
-  try { pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise; }
-  catch (err) { setSetupState("err", "PDF를 여는 데 실패했습니다: " + err.message); return; }
-  numPages = pdfDoc.numPages;
-  pageTexts = new Array(numPages + 1).fill(null);
-  textFound = false;
-  $("setup").style.display = "none";
-  $("viewerWrap").style.display = "block";
-  $("chatSheet").style.display = "flex";
-  $("pageBadge").style.display = "inline-block";
-  $("cropBtn").style.display = "inline-block";
-  await buildPages();
-  checkScanned();
-};
-
-var pageObserver = new IntersectionObserver(function (entries) {
-  entries.forEach(function (en) {
-    if (en.isIntersecting && !en.target.dataset.rendered) {
-      en.target.dataset.rendered = "1";
-      renderPage(en.target);
-    }
-  });
-}, { rootMargin: "600px" });
-
-var scrollObserver = new IntersectionObserver(function (entries) {
-  entries.forEach(function (en) {
-    if (en.isIntersecting) {
-      currentPage = parseInt(en.target.dataset.page, 10);
-      $("pageBadge").textContent = "p." + currentPage;
-    }
-  });
-}, { threshold: 0.3 });
-
-async function buildPages() {
-  var wrap = $("viewerWrap");
-  wrap.innerHTML = "";
-  var cw = Math.min(wrap.clientWidth - 16, 780);
-  for (var i = 1; i <= numPages; i++) {
-    var page = await pdfDoc.getPage(i);
-    var base = page.getViewport({ scale: 1 });
-    var scale = cw / base.width;
-    var vp = page.getViewport({ scale: scale });
-    var box = document.createElement("div");
-    box.className = "pageBox";
-    box.dataset.page = i;
-    box.dataset.scale = scale;
-    box.style.width = vp.width + "px";
-    box.style.height = vp.height + "px";
-    box.innerHTML = '<div class="pageNum">' + i + " / " + numPages + "</div>";
-    wrap.appendChild(box);
-    pageObserver.observe(box);
-    scrollObserver.observe(box);
-  }
-}
-
-async function renderPage(box) {
-  var n = parseInt(box.dataset.page, 10), scale = parseFloat(box.dataset.scale);
-  var page = await pdfDoc.getPage(n);
-  var vp = page.getViewport({ scale: scale });
-  var dpr = Math.min(window.devicePixelRatio || 1, 2);
-  var canvas = document.createElement("canvas");
-  canvas.width = Math.floor(vp.width * dpr);
-  canvas.height = Math.floor(vp.height * dpr);
-  var ctx = canvas.getContext("2d");
-  ctx.scale(dpr, dpr);
-  box.prepend(canvas);
-  await page.render({ canvasContext: ctx, viewport: vp }).promise;
-
-  var tl = document.createElement("div");
-  tl.className = "textLayer";
-  tl.style.setProperty("--scale-factor", vp.scale);
-  box.appendChild(tl);
-  var tc = await page.getTextContent();
-  pageTexts[n] = tc.items.map(function (it) { return it.str; }).join(" ").replace(/\s+/g, " ").trim();
-  if (pageTexts[n].length > 20) textFound = true;
-  try { pdfjsLib.renderTextLayer({ textContentSource: tc, container: tl, viewport: vp, textDivs: [] }); }
-  catch (e) { /* 텍스트 레이어 실패해도 보기는 유지 */ }
-}
-
-async function checkScanned() {
-  var probe = await getPageText(1);
-  if (probe.length < 20 && numPages > 1) probe += await getPageText(2);
-  if (probe.length < 20) $("scanWarn").style.display = "block";
-}
-$("closeWarn").onclick = function () { $("scanWarn").style.display = "none"; };
-
-async function getPageText(n) {
-  if (!pdfDoc || n < 1 || n > numPages) return "";
-  if (pageTexts[n] !== null && pageTexts[n] !== undefined) return pageTexts[n];
-  var page = await pdfDoc.getPage(n);
-  var tc = await page.getTextContent();
-  pageTexts[n] = tc.items.map(function (it) { return it.str; }).join(" ").replace(/\s+/g, " ").trim();
-  return pageTexts[n];
-}
-
-/* ───── 선택 → 액션바 ───── */
-document.addEventListener("selectionchange", function () {
-  var sel = window.getSelection();
-  var txt = sel ? sel.toString().trim() : "";
-  if (txt.length > 1 && sel.anchorNode && $("viewerWrap").contains(sel.anchorNode)) {
-    pendingSelection = txt;
-    $("selBar").style.display = "flex";
-  } else if (!txt) {
-    $("selBar").style.display = "none";
-  }
-});
-
-$("selBar").addEventListener("click", function (e) {
-  var act = e.target.dataset.act;
-  if (!act || !pendingSelection) return;
-  var sel = pendingSelection;
-  window.getSelection().removeAllRanges();
-  $("selBar").style.display = "none";
-  if (act === "translate") sendQuestion("이 문장을 자연스러운 한국어로 번역해 주세요.", sel);
-  else if (act === "explain") sendQuestion("이 부분이 무슨 뜻인지 쉽게 설명해 주세요.", sel);
-  else if (act === "vocab") sendQuestion("여기서 어려운 단어와 표현을 골라 뜻과 용례를 알려주세요.", sel);
-  else if (act === "ask") {
-    $("selChip").style.display = "block";
-    $("selChip").innerHTML = "🖍 " + sel.slice(0, 55).replace(/</g, "&lt;") + (sel.length > 55 ? "…" : "") + " <u id='clearSel'>✕</u>";
-    $("chatSheet").classList.remove("collapsed");
-    $("qInput").focus();
-  }
-});
-$("selChip").addEventListener("click", function (e) {
-  if (e.target.id === "clearSel") { pendingSelection = ""; $("selChip").style.display = "none"; }
-});
-
-/* ───── 그림 영역 선택 ───── */
-var cropMode = false, cropData = null, cropStart = null, cropRect = null, cropBox = null;
-
-$("cropBtn").onclick = function () {
-  cropMode = !cropMode;
-  document.body.classList.toggle("cropping", cropMode);
-  $("cropBtn").classList.toggle("on", cropMode);
-  $("cropTip").style.display = cropMode ? "block" : "none";
-  if (!cropMode) clearRect();
-};
-
-function clearRect() {
-  if (cropRect && cropRect.parentNode) cropRect.parentNode.removeChild(cropRect);
-  cropRect = null; cropStart = null; cropBox = null;
-}
-
-$("viewerWrap").addEventListener("pointerdown", function (e) {
-  if (!cropMode) return;
-  var box = e.target.closest(".pageBox");
-  if (!box || !box.querySelector("canvas")) return;
-  e.preventDefault();
-  clearRect();
-  cropBox = box;
-  var r = box.getBoundingClientRect();
-  cropStart = { x: e.clientX - r.left, y: e.clientY - r.top };
-  cropRect = document.createElement("div");
-  cropRect.className = "cropRect";
-  cropRect.style.left = cropStart.x + "px";
-  cropRect.style.top = cropStart.y + "px";
-  box.appendChild(cropRect);
-  box.setPointerCapture(e.pointerId);
-});
-
-$("viewerWrap").addEventListener("pointermove", function (e) {
-  if (!cropMode || !cropStart || !cropRect) return;
-  var r = cropBox.getBoundingClientRect();
-  var x = e.clientX - r.left, y = e.clientY - r.top;
-  cropRect.style.left = Math.min(x, cropStart.x) + "px";
-  cropRect.style.top = Math.min(y, cropStart.y) + "px";
-  cropRect.style.width = Math.abs(x - cropStart.x) + "px";
-  cropRect.style.height = Math.abs(y - cropStart.y) + "px";
-});
-
-$("viewerWrap").addEventListener("pointerup", function (e) {
-  if (!cropMode || !cropStart || !cropRect || !cropBox) return;
-  var r = cropBox.getBoundingClientRect();
-  var x1 = Math.min(e.clientX - r.left, cropStart.x), y1 = Math.min(e.clientY - r.top, cropStart.y);
-  var w = Math.abs(e.clientX - r.left - cropStart.x), h = Math.abs(e.clientY - r.top - cropStart.y);
-  var box = cropBox;
-  clearRect();
-  if (w < 24 || h < 24) { setStatusMsg("영역이 너무 작습니다. 조금 더 크게 드래그해 주세요."); return; }
-
-  var src = box.querySelector("canvas");
-  var k = src.width / box.clientWidth;           // 캔버스 해상도 대비 표시 배율
-  var out = document.createElement("canvas");
-  var ow = Math.round(w * k), oh = Math.round(h * k);
-  var cap = 1400;                                 // 전송량 억제
-  var shrink = Math.min(1, cap / Math.max(ow, oh));
-  out.width = Math.round(ow * shrink);
-  out.height = Math.round(oh * shrink);
-  out.getContext("2d").drawImage(src, Math.round(x1 * k), Math.round(y1 * k), ow, oh,
-                                 0, 0, out.width, out.height);
-  cropData = out.toDataURL("image/jpeg", 0.85);
-
-  $("cropImg").src = cropData;
-  $("cropPreview").style.display = "flex";
-  $("chatSheet").classList.remove("collapsed");
-  cropMode = false;
-  document.body.classList.remove("cropping");
-  $("cropBtn").classList.remove("on");
-  $("cropTip").style.display = "none";
-  $("qInput").focus();
-});
-
-$("cropClear").onclick = function () {
-  cropData = null;
-  $("cropPreview").style.display = "none";
-};
-
-function setStatusMsg(m) { addMsg("ai err", m); $("chatSheet").classList.remove("collapsed"); }
-
-/* ───── 채팅 ───── */
-$("chatHandle").onclick = function () { $("chatSheet").classList.toggle("collapsed"); };
-$("qInput").addEventListener("input", function () {
-  this.style.height = "auto";
-  this.style.height = Math.min(this.scrollHeight, 90) + "px";
-});
-$("qInput").addEventListener("keydown", function (e) {
-  if (e.key === "Enter" && !e.shiftKey && window.innerWidth > 760) { e.preventDefault(); $("sendBtn").click(); }
-});
-$("sendBtn").onclick = function () {
-  var q = $("qInput").value.trim();
-  var img = cropData;
-  if (!q && img) q = "이 그림을 본문 내용과 연결해 설명해 주세요.";
-  if (!q) return;
-  var sel = $("selChip").style.display === "block" ? pendingSelection : "";
-  $("qInput").value = ""; $("qInput").style.height = "auto";
-  $("selChip").style.display = "none"; pendingSelection = "";
-  $("cropPreview").style.display = "none"; cropData = null;
-  sendQuestion(q, sel, img);
-};
-
-function addMsg(cls, text, quote) {
-  var d = document.createElement("div");
-  d.className = "msg " + cls;
-  if (quote) {
-    var q = document.createElement("span");
-    q.className = "quote";
-    q.textContent = "\u201C" + (quote.length > 110 ? quote.slice(0, 110) + "…" : quote) + "\u201D";
-    d.appendChild(q);
-  }
-  d.appendChild(document.createTextNode(text));
-  $("chatLog").appendChild(d);
-  $("chatLog").scrollTop = $("chatLog").scrollHeight;
-  return d;
-}
-
-async function sendQuestion(question, selection, imageDataUrl) {
-  $("chatSheet").classList.remove("collapsed");
-  var img = (typeof imageDataUrl !== "undefined") ? imageDataUrl : null;
-  addMsg("user", question, selection);
-  if (img) {
-    var thumb = document.createElement("img");
-    thumb.src = img;
-    thumb.style.cssText = "max-width:180px;border-radius:8px;border:1px solid var(--line);align-self:flex-end;";
-    $("chatLog").appendChild(thumb);
-  }
-  var loader = addMsg("ai loading", "생각 중…");
-  $("sendBtn").disabled = true;
-  try {
-    var ctxParts = [];
-    var cur = await getPageText(currentPage);
-    if (cur) ctxParts.push("[현재 페이지 p." + currentPage + "]\n" + cur.slice(0, 6000));
-    var prev = await getPageText(currentPage - 1);
-    if (prev) ctxParts.push("[이전 페이지 p." + (currentPage - 1) + " 끝부분]\n" + prev.slice(-1200));
-
-    var sys = "당신은 영어 원서와 학술 논문을 함께 읽어주는 리딩 컴패니언입니다. " +
-      "독자는 한국어 사용자이며 지금 「" + docTitle + "」를 읽고 있습니다.\n\n" +
-      ctxParts.join("\n\n") +
-      "\n\n규칙: 한국어로 답하세요. 번역은 자연스럽게, 설명은 문맥을 짚어 간결하게. " +
-      "단어 풀이는 뜻·품사·이 문맥에서의 의미 순으로. 전문 용어는 정확히 다루세요. " +
-      "위에 제공된 페이지 밖 내용을 물으면 해당 페이지로 이동한 뒤 다시 물어봐 달라고 안내하세요.";
-
-    var userText = "";
-    if (selection) userText += "[독자가 선택한 구절]\n\"" + selection + "\"\n\n";
-    userText += "[질문]\n" + question;
-    if (chatHistory.length) userText = "[이전 대화 요약]\n" + chatHistory.slice(-4).join("\n") + "\n\n" + userText;
-
-    if (img) {
-      sys += "\n\n독자가 이 페이지에서 그림·표 영역을 잘라 함께 보냈습니다. " +
-             "이미지의 축·범례·단위·패널 구분을 구체적으로 읽고, 위 본문 내용과 연결해 설명하세요. " +
-             "본문에 해당 그림 번호나 캡션이 있으면 그 서술을 근거로 삼으세요. " +
-             "이미지에서 확실히 읽히지 않는 값은 추측하지 말고 읽을 수 없다고 밝히세요.";
-    }
-    var answer = await askModel(sys, userText, img);
-    loader.remove();
-    addMsg("ai", answer);
-    chatHistory.push("Q: " + question.slice(0, 120));
-    chatHistory.push("A: " + answer.slice(0, 200));
-  } catch (err) {
-    loader.remove();
-    addMsg("ai err", explainError(err.message));
-  } finally {
-    $("sendBtn").disabled = false;
-  }
-}
-
-loadSettings();
-if (!STORAGE_OK) setSetupState("err", "브라우저 저장이 차단되어 있습니다. 키는 이번 세션에만 유지됩니다.");
+  document.addEventListener("click", function () { cancelled = true; st.textContent = ""; }, true);
+  document.addEventListener("keydown", function () { cancelled = true; st.textContent = "자동 이동을 취소했습니다. 원하는 버전을 골라 주세요."; }, true);
+})();
 </script>
 </body>
 </html>
