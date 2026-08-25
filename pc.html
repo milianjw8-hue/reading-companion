@@ -155,6 +155,67 @@ if (typeof pdfjsLib === "undefined") {
   #selBar button:hover{background:rgba(251,250,247,.15);}
   #selBar button.hl{background:var(--marker); color:var(--ink);}
 
+  #ttsBar{position:fixed; bottom:64px; left:50%; transform:translateX(-50%); z-index:55;
+       display:none; align-items:center; gap:3px; background:var(--ink); color:var(--paper);
+       border-radius:22px; padding:5px 7px; box-shadow:0 4px 16px rgba(27,36,54,.35);}
+  #ttsBar .st{font-size:12px; padding:0 8px; opacity:.85; white-space:nowrap;}
+  #ttsBar button{border:none; background:transparent; color:var(--paper); font:inherit;
+       font-size:12.5px; font-weight:600; padding:6px 10px; border-radius:16px;
+       cursor:pointer; white-space:nowrap;}
+  #ttsBar button:hover{background:rgba(251,250,247,.15);}
+  #ttsBar #ttsStop{color:var(--marker);}
+
+  /* 연속 듣기(오디오북) 바 */
+  #abBar{position:fixed; bottom:64px; left:50%; transform:translateX(-50%); z-index:55;
+       display:none; align-items:center; gap:3px; background:var(--ink); color:var(--paper);
+       border-radius:22px; padding:5px 7px; box-shadow:0 4px 16px rgba(27,36,54,.35);
+       max-width:min(680px, calc(100vw - 24px));}
+  #abBar button{border:none; background:transparent; color:var(--paper); font:inherit;
+       font-size:12.5px; font-weight:600; padding:6px 9px; border-radius:16px;
+       cursor:pointer; white-space:nowrap;}
+  #abBar button:hover{background:rgba(251,250,247,.15);}
+  #abBar #abStop{color:var(--marker);}
+  #abBar .abmid{display:flex; flex-direction:column; min-width:0; padding:0 6px;}
+  #abBar #abInfo{font-size:10.5px; opacity:.7; white-space:nowrap;}
+  #abBar #abSent{font-size:12px; overflow:hidden; text-overflow:ellipsis;
+       white-space:nowrap; max-width:340px;}
+
+  /* 단어 카드 */
+  #wordPop{position:fixed; display:none; z-index:56; width:300px; background:var(--white);
+       border:1px solid var(--line); border-radius:12px; padding:11px 13px;
+       box-shadow:0 8px 26px rgba(27,36,54,.25);}
+  #wordPop .wp-head{display:flex; align-items:center; gap:6px; margin-bottom:6px;}
+  #wordPop .wp-head b{font-size:15.5px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;}
+  #wordPop .wp-head button{font:inherit; font-size:11.5px; border:1px solid var(--line);
+       background:var(--paper); border-radius:12px; padding:3px 8px; cursor:pointer; white-space:nowrap;}
+  #wordPop .wp-head button:hover{border-color:var(--ink-soft);}
+  #wordPop u{cursor:pointer; text-decoration:none; font-weight:700; color:var(--danger); padding:0 2px;}
+  #wpBody{font-size:12.5px; line-height:1.7; color:var(--ink-soft); white-space:pre-wrap;
+       max-height:160px; overflow-y:auto;}
+
+  /* 단어장 */
+  #wbModal{position:fixed; inset:0; z-index:70; background:rgba(27,36,54,.45);
+       display:none; align-items:center; justify-content:center; padding:20px;}
+  #wbCard{background:var(--white); border-radius:14px; width:min(520px, 100%); max-height:80vh;
+       display:flex; flex-direction:column; box-shadow:0 12px 40px rgba(27,36,54,.4);}
+  .wb-head{display:flex; align-items:center; gap:8px; padding:13px 16px; border-bottom:1px solid var(--line);}
+  .wb-head b{font-size:15px;}
+  .wb-head span{font-size:12px; color:var(--ink-soft); flex:1;}
+  .wb-head button{font:inherit; font-size:12px; border:1px solid var(--line); background:var(--paper);
+       border-radius:12px; padding:4px 10px; cursor:pointer;}
+  .wb-head button:hover{border-color:var(--ink-soft);}
+  .wb-head u{cursor:pointer; text-decoration:none; font-weight:700; color:var(--danger);
+       font-size:14px; padding:0 3px;}
+  #wbList{overflow-y:auto; padding:8px 16px 16px;}
+  .wb-row{border-bottom:1px solid var(--paper-dim); padding:9px 0;}
+  .wb-w{display:flex; align-items:center; gap:7px;}
+  .wb-w b{font-size:14.5px; flex:1;}
+  .wb-w button{border:none; background:transparent; cursor:pointer; font-size:13px; padding:2px 4px;}
+  .wb-del{color:var(--danger);}
+  .wb-m{font-size:12px; color:var(--ink-soft); white-space:pre-wrap; line-height:1.65; margin-top:3px;}
+  .wb-c{font-size:11.5px; color:#8a8578; font-style:italic; margin-top:3px; line-height:1.6;}
+  .wb-empty{font-size:13px; color:#8a8578; text-align:center; padding:30px 0; line-height:1.9;}
+
   #fatal{position:fixed; top:0; left:0; right:0; z-index:99; background:var(--danger);
        color:#fff; font-size:12px; line-height:1.6; padding:9px 12px; white-space:pre-wrap;}
   #toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:60;
@@ -180,6 +241,8 @@ if (typeof pdfjsLib === "undefined") {
   </div>
   <div id="pageBadge">— / —</div>
   <button class="hbtn" id="cropBtn" title="그림 영역 선택 (G)">그림 선택</button>
+  <button class="hbtn" id="abBtn" title="현재 페이지부터 문장을 이어서 낭독">▶ 연속 듣기</button>
+  <button class="hbtn" id="wbBtn" title="저장한 단어 보기">단어장</button>
   <button class="hbtn" id="setupBtn" title="설정">설정</button>
   <input type="file" id="fileInput" accept="application/pdf" hidden>
 </header>
@@ -220,7 +283,9 @@ if (typeof pdfjsLib === "undefined") {
       <div id="chatLog">
         <div id="empty">
           PDF를 열고 문장을 드래그해 보세요.<br>
-          <kbd>/</kbd> 입력창 · <kbd>G</kbd> 그림 선택 · <kbd>+</kbd> <kbd>−</kbd> 확대·축소
+          선택한 문장은 <b>🔊 듣기</b>로 영어 음성 낭독도 됩니다.<br>
+          단어를 클릭하면 뜻·발음 카드가 뜨고, <b>▶ 연속 듣기</b>는 오디오북처럼 이어 읽습니다.<br>
+          <kbd>/</kbd> 입력창 · <kbd>L</kbd> 듣기 · <kbd>G</kbd> 그림 선택 · <kbd>+</kbd> <kbd>−</kbd> 확대·축소
         </div>
       </div>
       <div id="selChip"></div>
@@ -246,11 +311,44 @@ if (typeof pdfjsLib === "undefined") {
 </div>
 
 <div id="selBar">
+  <button data-act="listen">🔊 듣기</button>
   <button class="hl" data-act="translate">번역</button>
   <button data-act="explain">쉽게 설명</button>
   <button data-act="vocab">단어·표현</button>
   <button data-act="ask">직접 질문</button>
 </div>
+
+<div id="ttsBar">
+  <span class="st">🔊 <span id="ttsState">읽는 중…</span></span>
+  <button id="ttsReplay" title="처음부터 다시 듣기">다시</button>
+  <button id="ttsRate" title="읽기 속도 바꾸기">1×</button>
+  <button id="ttsStop" title="읽기 정지 (Esc)">정지</button>
+</div>
+
+<div id="abBar">
+  <button id="abPrev" title="이전 문장">⏮</button>
+  <button id="abPlayPause" title="일시정지/재개">⏸</button>
+  <button id="abNext" title="다음 문장">⏭</button>
+  <div class="abmid"><span id="abInfo"></span><span id="abSent"></span></div>
+  <button id="abRate" title="읽기 속도 바꾸기">1×</button>
+  <button id="abStop" title="연속 듣기 종료">정지</button>
+</div>
+
+<div id="wordPop">
+  <div class="wp-head"><b id="wpWord"></b>
+    <button id="wpSpeak" title="발음 듣기">🔊</button>
+    <button id="wpAdd" title="단어장에 저장">＋단어장</button>
+    <u id="wpClose">✕</u></div>
+  <div id="wpBody"></div>
+</div>
+
+<div id="wbModal"><div id="wbCard">
+  <div class="wb-head"><b>📒 단어장</b><span id="wbCount"></span>
+    <button id="wbExport" title="CSV 파일로 내보내기">내보내기</button>
+    <button id="wbClear">비우기</button>
+    <u id="wbClose">✕</u></div>
+  <div id="wbList"></div>
+</div></div>
 
 <div id="toast"></div>
 
@@ -385,6 +483,11 @@ async function findWorkingModel(key) {
 async function askModel(systemText, userText, imageDataUrl) {
   try { return await callOnce(systemText, userText, imageDataUrl); }
   catch (e) {
+    if (String(e.message).indexOf("OVERLOADED") === 0) {
+      diag("모델 혼잡(503) → 2초 후 1회 재시도");
+      await new Promise(function (r) { setTimeout(r, 2000); });
+      return await callOnce(systemText, userText, imageDataUrl);
+    }
     if (String(e.message).indexOf("BAD_MODEL") === 0) {
       var key = ($("key").value || getKey()).trim();
       diag("모델 사용 불가 → 대체 모델 탐색");
@@ -432,6 +535,7 @@ async function callOnce(systemText, userText, imageDataUrl) {
     if (res.status === 400) throw new Error(/API key|API_KEY/i.test(detail) ? "BAD_KEY::" + detail : "BAD_REQUEST::" + detail);
     if (res.status === 429) throw new Error("QUOTA::" + detail);
     if (res.status === 404) throw new Error("BAD_MODEL::" + detail);
+    if (res.status === 503) throw new Error("OVERLOADED::" + detail);
     throw new Error("HTTP_" + res.status + "::" + detail);
   }
   var data = await res.json();
@@ -457,6 +561,7 @@ function explainError(msg) {
   if (msg.indexOf("BAD_KEY") === 0) return "키가 유효하지 않습니다. AI Studio에서 확인해 주세요.";
   if (msg.indexOf("BAD_MODEL") === 0) return "사용 가능한 모델을 찾지 못했습니다. 설정에서 모델 목록을 눌러 직접 골라 주세요.";
   if (msg.indexOf("QUOTA") === 0) return "무료 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.";
+  if (msg.indexOf("OVERLOADED") === 0) return "무료 모델이 지금 혼잡합니다(자동 재시도까지 실패). 잠시 후 다시 시도하거나, 설정 → 모델 목록에서 다른 Flash 계열 모델로 바꿔 보세요.";
   if (msg.indexOf("BAD_REQUEST") === 0) return "요청 형식 오류: " + msg.split("::")[1];
   return "오류가 발생했습니다: " + msg;
 }
@@ -482,6 +587,9 @@ $("right").addEventListener("drop", function (e) {
 });
 
 async function loadPdf(file) {
+  stopSpeech();
+  stopAudiobook();
+  hideWordPop();
   docTitle = file.name;
   $("fileMeta").textContent = docTitle;
   var buf = await file.arrayBuffer();
@@ -615,6 +723,457 @@ $("zoomFit").onclick = function () { setZoom(1); };
   });
 })();
 
+/* ───── 문장 듣기 (브라우저 내장 TTS — 키·비용 불필요) ───── */
+var TTS_RATE_STORE = "rc.ttsRate";
+var TTS_RATES = [0.7, 0.85, 1, 1.15];
+var TTS_OK = ("speechSynthesis" in window) && ("SpeechSynthesisUtterance" in window);
+var ttsVoice = null, ttsChunks = [], ttsIdx = 0, ttsActive = false;
+var ttsGen = 0, ttsKeepAlive = null, ttsLastText = "";
+
+function pickEnglishVoice() {
+  var vs = [];
+  try { vs = speechSynthesis.getVoices() || []; } catch (e) { return null; }
+  var en = vs.filter(function (v) { return /^en([-_]|$)/i.test(v.lang); });
+  if (!en.length) return null;
+  function score(v) {
+    var s = 0;
+    if (/^en[-_]US/i.test(v.lang)) s += 4;
+    else if (/^en[-_]GB/i.test(v.lang)) s += 3;
+    if (/natural|neural|online|premium|enhanced/i.test(v.name)) s += 4;
+    if (/google|microsoft|samantha|daniel/i.test(v.name)) s += 2;
+    if (v.default) s += 1;
+    return s;
+  }
+  en.sort(function (a, b) { return score(b) - score(a); });
+  return en[0];
+}
+if (TTS_OK) {
+  ttsVoice = pickEnglishVoice();
+  try {
+    speechSynthesis.addEventListener("voiceschanged", function () {
+      if (!ttsVoice) ttsVoice = pickEnglishVoice();
+    });
+  } catch (e) {}
+}
+
+function getTtsRate() {
+  try {
+    var r = parseFloat(localStorage.getItem(TTS_RATE_STORE));
+    return TTS_RATES.indexOf(r) >= 0 ? r : 1;
+  } catch (e) { return 1; }
+}
+function updateRateBtn() {
+  var t = getTtsRate() + "×";
+  $("ttsRate").textContent = t;
+  $("abRate").textContent = t;
+}
+function cycleTtsRate() {
+  var next = TTS_RATES[(TTS_RATES.indexOf(getTtsRate()) + 1) % TTS_RATES.length];
+  try { localStorage.setItem(TTS_RATE_STORE, String(next)); } catch (e) {}
+  updateRateBtn();
+}
+
+function cleanForSpeech(t) {
+  return t
+    .replace(/([A-Za-z])-\s+([a-z])/g, "$1$2")   /* 줄 끝 하이픈으로 끊긴 단어 복원 */
+    .replace(/\s+/g, " ")
+    .trim();
+}
+function splitForSpeech(t) {
+  /* 문장 단위로 끊어 읽어야 긴 선택도 브라우저가 중간에 멈추지 않는다 */
+  var parts = t.match(/[^.!?…]+[.!?…]+["'”’)\]]*|[^.!?…]+$/g) || [t];
+  var out = [];
+  parts.forEach(function (p) {
+    p = p.trim();
+    while (p.length > 220) {
+      var cut = p.lastIndexOf(",", 220);
+      if (cut < 60) cut = p.lastIndexOf(" ", 220);
+      if (cut < 60) cut = 220;
+      out.push(p.slice(0, cut + 1).trim());
+      p = p.slice(cut + 1).trim();
+    }
+    if (p) out.push(p);
+  });
+  return out;
+}
+
+function speakNextChunk(gen) {
+  if (gen !== ttsGen || !ttsActive) return;
+  if (ttsIdx >= ttsChunks.length) { stopSpeech(); return; }
+  $("ttsState").textContent = ttsChunks.length > 1
+    ? "읽는 중 " + (ttsIdx + 1) + "/" + ttsChunks.length : "읽는 중…";
+  var u = new SpeechSynthesisUtterance(ttsChunks[ttsIdx]);
+  if (ttsVoice) u.voice = ttsVoice;
+  u.lang = (ttsVoice && ttsVoice.lang) || "en-US";
+  u.rate = getTtsRate();
+  u.onend = function () {
+    if (gen !== ttsGen) return;
+    ttsIdx++;
+    speakNextChunk(gen);
+  };
+  u.onerror = function (ev) {
+    if (gen !== ttsGen) return;
+    var benign = /interrupted|canceled/i.test((ev && ev.error) || "");
+    var first = (ttsIdx === 0);
+    stopSpeech();
+    if (!benign && first) toast("음성 재생에 실패했습니다. 기기에 영어 음성이 설치되어 있는지 확인해 주세요.");
+  };
+  speechSynthesis.speak(u);
+}
+
+function speakSelection(text) {
+  if (!TTS_OK) { toast("이 브라우저는 음성 읽기를 지원하지 않습니다"); return; }
+  var t = cleanForSpeech(text || "");
+  if (!t) return;
+  stopAudiobook();
+  hideWordPop();
+  stopSpeech();
+  if (!ttsVoice) ttsVoice = pickEnglishVoice();
+  ttsLastText = t;
+  ttsChunks = splitForSpeech(t);
+  ttsIdx = 0;
+  ttsActive = true;
+  var gen = ++ttsGen;
+  updateRateBtn();
+  $("ttsBar").style.display = "flex";
+  /* 일부 브라우저는 긴 재생을 중간에 멈추므로 주기적으로 깨워 준다 */
+  ttsKeepAlive = setInterval(function () {
+    try { if (ttsActive && speechSynthesis.speaking) speechSynthesis.resume(); } catch (e) {}
+  }, 8000);
+  speakNextChunk(gen);
+}
+
+function stopSpeech() {
+  ttsActive = false;
+  ttsGen++;
+  if (ttsKeepAlive) { clearInterval(ttsKeepAlive); ttsKeepAlive = null; }
+  if (TTS_OK) { try { speechSynthesis.cancel(); } catch (e) {} }
+  $("ttsBar").style.display = "none";
+}
+
+$("ttsStop").onclick = stopSpeech;
+$("ttsReplay").onclick = function () { if (ttsLastText) speakSelection(ttsLastText); };
+$("ttsRate").onclick = function () {
+  cycleTtsRate();
+  if (ttsActive && ttsLastText) speakSelection(ttsLastText);
+};
+
+/* 낭독 공용 헬퍼: 청크 목록을 차례로 읽고 끝나면 onDone(null), 실패 시 onDone(Error) */
+function speakList(chunks, gen, onDone) {
+  var i = 0;
+  (function next() {
+    if (gen !== ttsGen) return;
+    if (i >= chunks.length) { if (onDone) onDone(null); return; }
+    var u = new SpeechSynthesisUtterance(chunks[i]);
+    if (ttsVoice) u.voice = ttsVoice;
+    u.lang = (ttsVoice && ttsVoice.lang) || "en-US";
+    u.rate = getTtsRate();
+    u.onend = function () { if (gen !== ttsGen) return; i++; next(); };
+    u.onerror = function (ev) {
+      if (gen !== ttsGen) return;
+      if (/interrupted|canceled/i.test((ev && ev.error) || "")) return;
+      if (onDone) onDone(new Error("TTS_FAILED"));
+    };
+    speechSynthesis.speak(u);
+  })();
+}
+
+function speakWordNow(w) {
+  if (!TTS_OK) { toast("이 브라우저는 음성 읽기를 지원하지 않습니다"); return; }
+  if (abActive && !abPaused) abTogglePause();
+  stopSpeech();
+  if (!ttsVoice) ttsVoice = pickEnglishVoice();
+  speakList([w], ++ttsGen, null);
+}
+
+/* ───── 연속 듣기 (오디오북 모드) ───── */
+var abSentences = [], abIdx = 0, abPage = 1, abActive = false, abPaused = false, abKeepAlive = null;
+
+function splitSentences(t) {
+  t = cleanForSpeech(t || "");
+  if (!t) return [];
+  return (t.match(/[^.!?…]+[.!?…]+["'”’)\]]*|[^.!?…]+$/g) || [])
+    .map(function (p) { return p.trim(); })
+    .filter(function (p) { return p.length > 1; });
+}
+
+function abUpdateBar() {
+  $("abInfo").textContent = "p." + abPage + " · " +
+    Math.min(abIdx + 1, Math.max(abSentences.length, 1)) + "/" + abSentences.length;
+  var s = abSentences[abIdx] || "";
+  $("abSent").textContent = s.length > 90 ? s.slice(0, 90) + "…" : s;
+  $("abPlayPause").textContent = abPaused ? "▶" : "⏸";
+}
+
+function abScrollToPage() {
+  var t = document.querySelector('.pageBox[data-page="' + abPage + '"]');
+  if (t) $("right").scrollTop = t.offsetTop - 14;
+}
+
+async function abSpeakCurrent() {
+  if (!abActive || abPaused) return;
+  while (abActive && abIdx >= abSentences.length) {
+    if (abPage >= numPages) { stopAudiobook(); toast("문서를 끝까지 읽었습니다"); return; }
+    abPage++;
+    abSentences = splitSentences(await getPageText(abPage));
+    abIdx = 0;
+    abScrollToPage();
+  }
+  if (!abActive || abPaused) return;
+  abUpdateBar();
+  var gen = ++ttsGen;
+  speakList(splitForSpeech(abSentences[abIdx]), gen, function (err) {
+    if (err) { stopAudiobook(); toast("음성 재생에 실패했습니다. 기기에 영어 음성이 있는지 확인해 주세요."); return; }
+    if (!abActive || abPaused || gen !== ttsGen) return;
+    abIdx++;
+    abSpeakCurrent();
+  });
+}
+
+async function startAudiobook() {
+  if (!TTS_OK) { toast("이 브라우저는 음성 읽기를 지원하지 않습니다"); return; }
+  if (!pdfDoc) { toast("먼저 PDF를 열어주세요"); return; }
+  stopSpeech();
+  hideWordPop();
+  if (!ttsVoice) ttsVoice = pickEnglishVoice();
+  abPage = currentPage;
+  abSentences = splitSentences(await getPageText(abPage));
+  abIdx = 0;
+  /* 문장을 선택해 두었으면 그 문장부터 시작 */
+  var probe = cleanForSpeech(pendingSelection || "").toLowerCase().slice(0, 30);
+  if (probe.length > 4) {
+    for (var i = 0; i < abSentences.length; i++) {
+      if (abSentences[i].toLowerCase().indexOf(probe) >= 0) { abIdx = i; break; }
+    }
+  }
+  try { window.getSelection().removeAllRanges(); } catch (e) {}
+  $("selBar").style.display = "none";
+  abActive = true; abPaused = false;
+  $("abBar").style.display = "flex";
+  $("abBtn").classList.add("on");
+  updateRateBtn();
+  abKeepAlive = setInterval(function () {
+    try { if (abActive && !abPaused && speechSynthesis.speaking) speechSynthesis.resume(); } catch (e) {}
+  }, 8000);
+  abSpeakCurrent();
+}
+
+function stopAudiobook() {
+  abActive = false; abPaused = false;
+  ttsGen++;
+  if (abKeepAlive) { clearInterval(abKeepAlive); abKeepAlive = null; }
+  if (TTS_OK) { try { speechSynthesis.cancel(); } catch (e) {} }
+  $("abBar").style.display = "none";
+  $("abBtn").classList.remove("on");
+}
+
+function abTogglePause() {
+  if (!abActive) return;
+  if (abPaused) { abPaused = false; abUpdateBar(); abSpeakCurrent(); }
+  else {
+    abPaused = true;
+    ttsGen++;
+    if (TTS_OK) { try { speechSynthesis.cancel(); } catch (e) {} }
+    abUpdateBar();
+  }
+}
+
+function abStep(d) {
+  if (!abActive) return;
+  ttsGen++;
+  if (TTS_OK) { try { speechSynthesis.cancel(); } catch (e) {} }
+  abIdx = Math.max(0, abIdx + d);
+  abPaused = false;
+  abUpdateBar();
+  abSpeakCurrent();
+}
+
+$("abBtn").onclick = function () { if (abActive) stopAudiobook(); else startAudiobook(); };
+$("abPlayPause").onclick = abTogglePause;
+$("abPrev").onclick = function () { abStep(-1); };
+$("abNext").onclick = function () { abStep(1); };
+$("abStop").onclick = stopAudiobook;
+$("abRate").onclick = function () {
+  cycleTtsRate();
+  if (abActive && !abPaused) {
+    ttsGen++;
+    if (TTS_OK) { try { speechSynthesis.cancel(); } catch (e) {} }
+    abSpeakCurrent();
+  }
+};
+
+/* ───── 단어 탭: 뜻·발음 카드 ───── */
+var wordCache = {};
+var wpWordNow = "", wpCtxNow = "", wpMeaning = "";
+
+function caretFromPoint(x, y) {
+  if (document.caretRangeFromPoint) {
+    var r = document.caretRangeFromPoint(x, y);
+    return r ? { node: r.startContainer, offset: r.startOffset } : null;
+  }
+  if (document.caretPositionFromPoint) {
+    var p = document.caretPositionFromPoint(x, y);
+    return p ? { node: p.offsetNode, offset: p.offset } : null;
+  }
+  return null;
+}
+
+function wordAtPoint(x, y) {
+  var c = caretFromPoint(x, y);
+  if (!c || !c.node || c.node.nodeType !== 3) return null;
+  var t = c.node.textContent || "", i = Math.min(c.offset, t.length);
+  var isW = function (ch) { return !!ch && /[A-Za-z'’-]/.test(ch); };
+  var a = i, b = i;
+  while (a > 0 && isW(t.charAt(a - 1))) a--;
+  while (b < t.length && isW(t.charAt(b))) b++;
+  var w = t.slice(a, b).replace(/^['’-]+|['’-]+$/g, "");
+  if (w.length < 2 || !/^[A-Za-z][A-Za-z'’-]*$/.test(w)) return null;
+  return { word: w, context: t.replace(/\s+/g, " ").trim() };
+}
+
+function hideWordPop() { $("wordPop").style.display = "none"; wpWordNow = ""; }
+
+function showWordPop(word, ctx, x, y) {
+  wpWordNow = word; wpCtxNow = ctx;
+  wpMeaning = wordCache[word.toLowerCase()] || "";
+  $("wpWord").textContent = word;
+  $("wpBody").textContent = wpMeaning || "뜻을 불러오는 중…";
+  var pop = $("wordPop");
+  pop.style.display = "block";
+  var pw = pop.offsetWidth || 300, ph = pop.offsetHeight || 140;
+  var left = Math.max(8, Math.min(window.innerWidth - pw - 8, x - pw / 2));
+  var top = y + 16;
+  if (top + ph > window.innerHeight - 10) top = Math.max(52, y - ph - 14);
+  pop.style.left = left + "px";
+  pop.style.top = top + "px";
+  if (!wpMeaning) lookupWord(word, ctx);
+}
+
+async function lookupWord(word, ctx) {
+  try {
+    var ans = await askModel(
+      "당신은 영어 학습자를 위한 간결한 사전입니다. 요청된 형식만 출력하세요.",
+      '단어: "' + word + '"\n나온 문맥: "' + (ctx || "").slice(0, 200) + '"\n\n' +
+      "아래 형식으로만 4줄 이내로 답하세요.\n발음: /IPA/\n품사: \n뜻: (이 문맥에서의 한국어 뜻 한 줄)\n기타: (그 밖의 주요 뜻, 없으면 이 줄 생략)");
+    if (word !== wpWordNow) return;
+    wpMeaning = ans;
+    wordCache[word.toLowerCase()] = ans;
+    $("wpBody").textContent = ans;
+  } catch (e) {
+    if (word !== wpWordNow) return;
+    $("wpBody").textContent = (e.message === "NO_KEY")
+      ? "뜻을 보려면 설정에서 API 키를 저장하세요. 발음 듣기(🔊)와 단어장 저장은 키 없이 됩니다."
+      : explainError(e.message);
+  }
+}
+
+$("right").addEventListener("click", function (e) {
+  if (cropMode) return;
+  var sel = window.getSelection();
+  if (sel && sel.toString().trim().length > 1) return;   /* 드래그 선택은 액션바가 처리 */
+  if (!e.target.closest(".textLayer")) { hideWordPop(); return; }
+  var hit = wordAtPoint(e.clientX, e.clientY);
+  if (!hit) { hideWordPop(); return; }
+  if (abActive && !abPaused) abTogglePause();            /* 단어 확인 동안 오디오북 일시정지 */
+  showWordPop(hit.word, hit.context, e.clientX, e.clientY);
+});
+document.addEventListener("click", function (e) {
+  var pop = $("wordPop");
+  if (pop.style.display !== "block") return;
+  if (pop.contains(e.target)) return;
+  if (e.target.closest && e.target.closest(".textLayer")) return;
+  hideWordPop();
+});
+$("wpClose").onclick = hideWordPop;
+$("wpSpeak").onclick = function () { if (wpWordNow) speakWordNow(wpWordNow); };
+$("wpAdd").onclick = function () {
+  if (!wpWordNow) return;
+  var list = loadWb(), lower = wpWordNow.toLowerCase();
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].w.toLowerCase() === lower) {
+      if (!list[i].m && wpMeaning) { list[i].m = wpMeaning; saveWb(list); }
+      toast("이미 단어장에 있는 단어입니다");
+      return;
+    }
+  }
+  list.unshift({ w: wpWordNow, m: wpMeaning || "", c: (wpCtxNow || "").slice(0, 160), d: docTitle, t: Date.now() });
+  saveWb(list);
+  updateWbBadge();
+  toast("단어장에 저장했습니다 (" + list.length + "개)");
+};
+
+/* ───── 단어장 ───── */
+var WB_STORE = "rc.wordbook";
+function loadWb() {
+  try {
+    var l = JSON.parse(localStorage.getItem(WB_STORE) || "[]");
+    return Array.isArray(l) ? l : [];
+  } catch (e) { return []; }
+}
+function saveWb(list) { try { localStorage.setItem(WB_STORE, JSON.stringify(list)); } catch (e) {} }
+function updateWbBadge() {
+  var n = loadWb().length;
+  $("wbBtn").textContent = n ? "단어장 " + n : "단어장";
+}
+function renderWb() {
+  var list = loadWb();
+  $("wbCount").textContent = list.length + "개";
+  var box = $("wbList");
+  box.innerHTML = "";
+  if (!list.length) {
+    box.innerHTML = '<div class="wb-empty">저장된 단어가 없습니다.<br>본문에서 단어를 클릭하고 ＋단어장을 눌러 보세요.</div>';
+    return;
+  }
+  list.forEach(function (it) {
+    var row = document.createElement("div"); row.className = "wb-row";
+    var head = document.createElement("div"); head.className = "wb-w";
+    var b = document.createElement("b"); b.textContent = it.w;
+    var sp = document.createElement("button"); sp.textContent = "🔊"; sp.title = "발음 듣기";
+    sp.onclick = function () { speakWordNow(it.w); };
+    var del = document.createElement("button"); del.textContent = "✕"; del.className = "wb-del"; del.title = "삭제";
+    del.onclick = function () {
+      saveWb(loadWb().filter(function (x) { return !(x.w === it.w && x.t === it.t); }));
+      renderWb(); updateWbBadge();
+    };
+    head.appendChild(b); head.appendChild(sp); head.appendChild(del);
+    row.appendChild(head);
+    if (it.m) { var m = document.createElement("div"); m.className = "wb-m"; m.textContent = it.m; row.appendChild(m); }
+    if (it.c) {
+      var cq = document.createElement("div"); cq.className = "wb-c";
+      cq.textContent = "“" + it.c + "”" + (it.d ? " — " + it.d : "");
+      row.appendChild(cq);
+    }
+    box.appendChild(row);
+  });
+}
+$("wbBtn").onclick = function () { renderWb(); $("wbModal").style.display = "flex"; };
+$("wbClose").onclick = function () { $("wbModal").style.display = "none"; };
+$("wbModal").addEventListener("click", function (e) {
+  if (e.target === $("wbModal")) $("wbModal").style.display = "none";
+});
+$("wbClear").onclick = function () {
+  if (!loadWb().length) return;
+  if (confirm("단어장의 단어를 모두 삭제할까요?")) { saveWb([]); renderWb(); updateWbBadge(); }
+};
+$("wbExport").onclick = function () {
+  var list = loadWb();
+  if (!list.length) { toast("저장된 단어가 없습니다"); return; }
+  function esc(s) { return '"' + String(s == null ? "" : s).replace(/"/g, '""').replace(/\n/g, " / ") + '"'; }
+  var rows = ["단어,뜻,문맥,문서,저장일"];
+  list.forEach(function (it) {
+    rows.push([esc(it.w), esc(it.m), esc(it.c), esc(it.d),
+               esc(it.t ? new Date(it.t).toISOString().slice(0, 10) : "")].join(","));
+  });
+  var blob = new Blob(["\uFEFF" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "reading-companion-wordbook.csv";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+};
+updateWbBadge();
+
 /* ───── 문장 선택 ───── */
 document.addEventListener("selectionchange", function () {
   var sel = window.getSelection();
@@ -639,6 +1198,7 @@ $("selBar").addEventListener("click", function (e) {
   var act = e.target.dataset.act;
   if (!act || !pendingSelection) return;
   var sel = pendingSelection;
+  if (act === "listen") { speakSelection(sel); return; }  /* 선택을 유지한 채 낭독 */
   window.getSelection().removeAllRanges();
   $("selBar").style.display = "none";
   if (act === "translate") sendQuestion("이 문장을 자연스러운 한국어로 번역해 주세요.", sel);
@@ -822,12 +1382,22 @@ document.addEventListener("keydown", function (e) {
   var typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
   if (e.key === "Escape") {
     if (cropMode) toggleCrop();
+    stopSpeech();
+    stopAudiobook();
+    hideWordPop();
+    $("wbModal").style.display = "none";
     $("selBar").style.display = "none";
     if (typing) document.activeElement.blur();
     return;
   }
   if (typing) return;
   if (e.key === "/") { e.preventDefault(); $("qInput").focus(); }
+  else if (e.key === "l" || e.key === "L") {
+    e.preventDefault();
+    if (ttsActive) stopSpeech();
+    else if (pendingSelection) speakSelection(pendingSelection);
+    else if (ttsLastText) speakSelection(ttsLastText);
+  }
   else if (e.key === "g" || e.key === "G") { e.preventDefault(); toggleCrop(); }
   else if (e.key === "+" || e.key === "=") { e.preventDefault(); setZoom(zoom + 0.15); }
   else if (e.key === "-" || e.key === "_") { e.preventDefault(); setZoom(zoom - 0.15); }
