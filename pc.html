@@ -155,6 +155,16 @@ if (typeof pdfjsLib === "undefined") {
   #selBar button:hover{background:rgba(251,250,247,.15);}
   #selBar button.hl{background:var(--marker); color:var(--ink);}
 
+  #ttsBar{position:fixed; bottom:64px; left:50%; transform:translateX(-50%); z-index:55;
+       display:none; align-items:center; gap:3px; background:var(--ink); color:var(--paper);
+       border-radius:22px; padding:5px 7px; box-shadow:0 4px 16px rgba(27,36,54,.35);}
+  #ttsBar .st{font-size:12px; padding:0 8px; opacity:.85; white-space:nowrap;}
+  #ttsBar button{border:none; background:transparent; color:var(--paper); font:inherit;
+       font-size:12.5px; font-weight:600; padding:6px 10px; border-radius:16px;
+       cursor:pointer; white-space:nowrap;}
+  #ttsBar button:hover{background:rgba(251,250,247,.15);}
+  #ttsBar #ttsStop{color:var(--marker);}
+
   #fatal{position:fixed; top:0; left:0; right:0; z-index:99; background:var(--danger);
        color:#fff; font-size:12px; line-height:1.6; padding:9px 12px; white-space:pre-wrap;}
   #toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:60;
@@ -220,7 +230,8 @@ if (typeof pdfjsLib === "undefined") {
       <div id="chatLog">
         <div id="empty">
           PDF를 열고 문장을 드래그해 보세요.<br>
-          <kbd>/</kbd> 입력창 · <kbd>G</kbd> 그림 선택 · <kbd>+</kbd> <kbd>−</kbd> 확대·축소
+          선택한 문장은 <b>🔊 듣기</b>로 영어 음성 낭독도 됩니다.<br>
+          <kbd>/</kbd> 입력창 · <kbd>L</kbd> 듣기 · <kbd>G</kbd> 그림 선택 · <kbd>+</kbd> <kbd>−</kbd> 확대·축소
         </div>
       </div>
       <div id="selChip"></div>
@@ -246,10 +257,18 @@ if (typeof pdfjsLib === "undefined") {
 </div>
 
 <div id="selBar">
+  <button data-act="listen">🔊 듣기</button>
   <button class="hl" data-act="translate">번역</button>
   <button data-act="explain">쉽게 설명</button>
   <button data-act="vocab">단어·표현</button>
   <button data-act="ask">직접 질문</button>
+</div>
+
+<div id="ttsBar">
+  <span class="st">🔊 <span id="ttsState">읽는 중…</span></span>
+  <button id="ttsReplay" title="처음부터 다시 듣기">다시</button>
+  <button id="ttsRate" title="읽기 속도 바꾸기">1×</button>
+  <button id="ttsStop" title="읽기 정지 (Esc)">정지</button>
 </div>
 
 <div id="toast"></div>
@@ -482,6 +501,7 @@ $("right").addEventListener("drop", function (e) {
 });
 
 async function loadPdf(file) {
+  stopSpeech();
   docTitle = file.name;
   $("fileMeta").textContent = docTitle;
   var buf = await file.arrayBuffer();
@@ -615,6 +635,132 @@ $("zoomFit").onclick = function () { setZoom(1); };
   });
 })();
 
+/* ───── 문장 듣기 (브라우저 내장 TTS — 키·비용 불필요) ───── */
+var TTS_RATE_STORE = "rc.ttsRate";
+var TTS_RATES = [0.7, 0.85, 1, 1.15];
+var TTS_OK = ("speechSynthesis" in window) && ("SpeechSynthesisUtterance" in window);
+var ttsVoice = null, ttsChunks = [], ttsIdx = 0, ttsActive = false;
+var ttsGen = 0, ttsKeepAlive = null, ttsLastText = "";
+
+function pickEnglishVoice() {
+  var vs = [];
+  try { vs = speechSynthesis.getVoices() || []; } catch (e) { return null; }
+  var en = vs.filter(function (v) { return /^en([-_]|$)/i.test(v.lang); });
+  if (!en.length) return null;
+  function score(v) {
+    var s = 0;
+    if (/^en[-_]US/i.test(v.lang)) s += 4;
+    else if (/^en[-_]GB/i.test(v.lang)) s += 3;
+    if (/natural|neural|online|premium|enhanced/i.test(v.name)) s += 4;
+    if (/google|microsoft|samantha|daniel/i.test(v.name)) s += 2;
+    if (v.default) s += 1;
+    return s;
+  }
+  en.sort(function (a, b) { return score(b) - score(a); });
+  return en[0];
+}
+if (TTS_OK) {
+  ttsVoice = pickEnglishVoice();
+  try {
+    speechSynthesis.addEventListener("voiceschanged", function () {
+      if (!ttsVoice) ttsVoice = pickEnglishVoice();
+    });
+  } catch (e) {}
+}
+
+function getTtsRate() {
+  try {
+    var r = parseFloat(localStorage.getItem(TTS_RATE_STORE));
+    return TTS_RATES.indexOf(r) >= 0 ? r : 1;
+  } catch (e) { return 1; }
+}
+function updateRateBtn() { $("ttsRate").textContent = getTtsRate() + "×"; }
+
+function cleanForSpeech(t) {
+  return t
+    .replace(/([A-Za-z])-\s+([a-z])/g, "$1$2")   /* 줄 끝 하이픈으로 끊긴 단어 복원 */
+    .replace(/\s+/g, " ")
+    .trim();
+}
+function splitForSpeech(t) {
+  /* 문장 단위로 끊어 읽어야 긴 선택도 브라우저가 중간에 멈추지 않는다 */
+  var parts = t.match(/[^.!?…]+[.!?…]+["'”’)\]]*|[^.!?…]+$/g) || [t];
+  var out = [];
+  parts.forEach(function (p) {
+    p = p.trim();
+    while (p.length > 220) {
+      var cut = p.lastIndexOf(",", 220);
+      if (cut < 60) cut = p.lastIndexOf(" ", 220);
+      if (cut < 60) cut = 220;
+      out.push(p.slice(0, cut + 1).trim());
+      p = p.slice(cut + 1).trim();
+    }
+    if (p) out.push(p);
+  });
+  return out;
+}
+
+function speakNextChunk(gen) {
+  if (gen !== ttsGen || !ttsActive) return;
+  if (ttsIdx >= ttsChunks.length) { stopSpeech(); return; }
+  $("ttsState").textContent = ttsChunks.length > 1
+    ? "읽는 중 " + (ttsIdx + 1) + "/" + ttsChunks.length : "읽는 중…";
+  var u = new SpeechSynthesisUtterance(ttsChunks[ttsIdx]);
+  if (ttsVoice) u.voice = ttsVoice;
+  u.lang = (ttsVoice && ttsVoice.lang) || "en-US";
+  u.rate = getTtsRate();
+  u.onend = function () {
+    if (gen !== ttsGen) return;
+    ttsIdx++;
+    speakNextChunk(gen);
+  };
+  u.onerror = function (ev) {
+    if (gen !== ttsGen) return;
+    var benign = /interrupted|canceled/i.test((ev && ev.error) || "");
+    var first = (ttsIdx === 0);
+    stopSpeech();
+    if (!benign && first) toast("음성 재생에 실패했습니다. 기기에 영어 음성이 설치되어 있는지 확인해 주세요.");
+  };
+  speechSynthesis.speak(u);
+}
+
+function speakSelection(text) {
+  if (!TTS_OK) { toast("이 브라우저는 음성 읽기를 지원하지 않습니다"); return; }
+  var t = cleanForSpeech(text || "");
+  if (!t) return;
+  stopSpeech();
+  if (!ttsVoice) ttsVoice = pickEnglishVoice();
+  ttsLastText = t;
+  ttsChunks = splitForSpeech(t);
+  ttsIdx = 0;
+  ttsActive = true;
+  var gen = ++ttsGen;
+  updateRateBtn();
+  $("ttsBar").style.display = "flex";
+  /* 일부 브라우저는 긴 재생을 중간에 멈추므로 주기적으로 깨워 준다 */
+  ttsKeepAlive = setInterval(function () {
+    try { if (ttsActive && speechSynthesis.speaking) speechSynthesis.resume(); } catch (e) {}
+  }, 8000);
+  speakNextChunk(gen);
+}
+
+function stopSpeech() {
+  ttsActive = false;
+  ttsGen++;
+  if (ttsKeepAlive) { clearInterval(ttsKeepAlive); ttsKeepAlive = null; }
+  if (TTS_OK) { try { speechSynthesis.cancel(); } catch (e) {} }
+  $("ttsBar").style.display = "none";
+}
+
+$("ttsStop").onclick = stopSpeech;
+$("ttsReplay").onclick = function () { if (ttsLastText) speakSelection(ttsLastText); };
+$("ttsRate").onclick = function () {
+  var next = TTS_RATES[(TTS_RATES.indexOf(getTtsRate()) + 1) % TTS_RATES.length];
+  try { localStorage.setItem(TTS_RATE_STORE, String(next)); } catch (e) {}
+  updateRateBtn();
+  if (ttsActive && ttsLastText) speakSelection(ttsLastText);
+};
+
 /* ───── 문장 선택 ───── */
 document.addEventListener("selectionchange", function () {
   var sel = window.getSelection();
@@ -639,6 +785,7 @@ $("selBar").addEventListener("click", function (e) {
   var act = e.target.dataset.act;
   if (!act || !pendingSelection) return;
   var sel = pendingSelection;
+  if (act === "listen") { speakSelection(sel); return; }  /* 선택을 유지한 채 낭독 */
   window.getSelection().removeAllRanges();
   $("selBar").style.display = "none";
   if (act === "translate") sendQuestion("이 문장을 자연스러운 한국어로 번역해 주세요.", sel);
@@ -822,12 +969,19 @@ document.addEventListener("keydown", function (e) {
   var typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
   if (e.key === "Escape") {
     if (cropMode) toggleCrop();
+    stopSpeech();
     $("selBar").style.display = "none";
     if (typing) document.activeElement.blur();
     return;
   }
   if (typing) return;
   if (e.key === "/") { e.preventDefault(); $("qInput").focus(); }
+  else if (e.key === "l" || e.key === "L") {
+    e.preventDefault();
+    if (ttsActive) stopSpeech();
+    else if (pendingSelection) speakSelection(pendingSelection);
+    else if (ttsLastText) speakSelection(ttsLastText);
+  }
   else if (e.key === "g" || e.key === "G") { e.preventDefault(); toggleCrop(); }
   else if (e.key === "+" || e.key === "=") { e.preventDefault(); setZoom(zoom + 0.15); }
   else if (e.key === "-" || e.key === "_") { e.preventDefault(); setZoom(zoom - 0.15); }
