@@ -471,6 +471,12 @@ async function askModel(systemText, userText, imageDataUrl) {
   try {
     return await callOnce(systemText, userText, imageDataUrl);
   } catch (e) {
+    // 서버 혼잡(503): 2초 뒤 한 번만 자동 재시도
+    if (String(e.message).indexOf("OVERLOADED") === 0) {
+      diag("모델 혼잡(503) → 2초 후 1회 재시도");
+      await new Promise(function (r) { setTimeout(r, 2000); });
+      return await callOnce(systemText, userText, imageDataUrl);
+    }
     // 모델이 폐기된 경우: 사용 가능한 모델을 찾아 한 번만 자동 재시도
     if (String(e.message).indexOf("BAD_MODEL") === 0) {
       var key = ($("key").value || getKey()).trim();
@@ -520,6 +526,7 @@ async function callOnce(systemText, userText, imageDataUrl) {
     if (res.status === 400) throw new Error(/API key|API_KEY/i.test(detail) ? "BAD_KEY::" + detail : "BAD_REQUEST::" + detail);
     if (res.status === 429) throw new Error("QUOTA::" + detail);
     if (res.status === 404) throw new Error("BAD_MODEL::" + detail);
+    if (res.status === 503) throw new Error("OVERLOADED::" + detail);
     diag("HTTP " + res.status + " :: " + detail.slice(0, 300));
     throw new Error("HTTP_" + res.status + "::" + detail);
   }
@@ -548,6 +555,7 @@ function explainError(msg) {
   if (msg.indexOf("BAD_KEY") === 0) return "키가 유효하지 않습니다. AI Studio에서 키를 다시 확인해 주세요.";
   if (msg.indexOf("BAD_MODEL") === 0) return "모델 ID를 찾을 수 없습니다. ⚙ 설정에서 현재 사용 가능한 모델 ID로 바꿔 주세요.";
   if (msg.indexOf("QUOTA") === 0) return "무료 한도를 초과했습니다. 잠시 후 다시 시도하거나 더 여유 있는 모델로 바꿔 보세요.";
+  if (msg.indexOf("OVERLOADED") === 0) return "무료 모델이 지금 혼잡합니다(자동 재시도까지 실패). 잠시 후 다시 시도하거나, ⚙ 설정의 모델 목록에서 다른 Flash 계열 모델로 바꿔 보세요.";
   if (msg.indexOf("BAD_REQUEST") === 0) return "요청 형식 오류: " + msg.split("::")[1];
   return "오류가 발생했습니다: " + msg;
 }
